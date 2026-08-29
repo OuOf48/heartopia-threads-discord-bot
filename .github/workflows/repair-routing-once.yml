@@ -1,4 +1,4 @@
-name: 一次性修正 Discord 圖片分流
+name: 一次性清理 Discord 錯發圖片
 
 on:
   push:
@@ -8,63 +8,30 @@ on:
       - ".github/workflows/repair-routing-once.yml"
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: heartopia-threads-monitor
   cancel-in-progress: false
 
 jobs:
-  repair:
+  cleanup:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 5
     env:
       DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
-      DISCORD_CHANNEL_ID: ${{ vars.DISCORD_CHANNEL_ID }}
-      DISCORD_UPDATE_CHANNEL_ID: ${{ vars.DISCORD_UPDATE_CHANNEL_ID }}
-      DISCORD_METEOR_CHANNEL_ID: ${{ vars.DISCORD_METEOR_CHANNEL_ID }}
-      DISCORD_PINK_BUBBLE_CHANNEL_ID: ${{ vars.DISCORD_PINK_BUBBLE_CHANNEL_ID }}
-      THREADS_USERNAME: ${{ vars.THREADS_USERNAME }}
+      UPDATE_CHANNEL_ID: "1519591991950839828"
+      PINK_CHANNEL_ID: "1525791309871317125"
 
     steps:
-      - name: 下載程式碼
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: 設定 Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-
-      - name: 安裝套件
-        run: npm ci
-
-      - name: 尋找系統 Chrome
-        shell: bash
-        run: |
-          chrome_path="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium || true)"
-          if [[ -z "$chrome_path" ]]; then
-            echo "系統沒有 Chrome，安裝 Playwright Chromium。"
-            npx playwright-core install chromium
-            chrome_path="$(node -e "const { chromium } = require('playwright-core'); process.stdout.write(chromium.executablePath())")"
-          fi
-          echo "CHROME_PATH=$chrome_path" >> "$GITHUB_ENV"
-
-      - name: 刪除錯發與重複訊息
-        env:
-          UPDATE_CHANNEL_ID: "1519591991950839828"
-          PINK_CHANNEL_ID: "1525791309871317125"
-          DISCORD_BOT_ID: "1519597054362652752"
+      - name: 保留正確版本並刪除錯發與重複訊息
         run: |
           node --input-type=module <<'NODE'
           const token = String(process.env.DISCORD_BOT_TOKEN || "").trim();
-          const botId = process.env.DISCORD_BOT_ID;
           const apiOrigin = "https://discord.com/api/v10";
           const sleep = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
 
-          if (!token) throw new Error("缺少 DISCORD_BOT_TOKEN。 ");
+          if (!token) throw new Error("缺少 DISCORD_BOT_TOKEN。");
 
           async function discord(path, options = {}, attempt = 1) {
             const response = await fetch(`${apiOrigin}${path}`, {
@@ -94,47 +61,76 @@ jobs:
             return body ? JSON.parse(body) : null;
           }
 
-          async function cleanupChannel(channelId, postIds) {
-            const messages = await discord(`/channels/${channelId}/messages?limit=100`);
-            const matches = messages.filter((message) => {
-              if (message.author?.id !== botId) return false;
-              const urls = (message.embeds || []).map((embed) => String(embed.url || ""));
-              return urls.some((url) => postIds.some((postId) => url.includes(`/post/${postId}`)));
+          function textMatches(message, { postId, title, date }) {
+            if (!message.author?.bot) return false;
+            const embeds = message.embeds || [];
+            const hasPostUrl = embeds.some((embed) =>
+              String(embed.url || "").includes(`/post/${postId}`),
+            );
+            const hasTitleAndDate = embeds.some((embed) => {
+              const value = String(embed.title || "");
+              return value.includes(title) && value.includes(date);
             });
-
-            for (const message of matches) {
-              await discord(`/channels/${channelId}/messages/${message.id}`, { method: "DELETE" });
-            }
-            console.log(`頻道 ${channelId}：已刪除 ${matches.length} 則目標舊訊息。`);
-            return matches.length;
+            return hasPostUrl || hasTitleAndDate;
           }
 
-          const deletedFromUpdates = await cleanupChannel(process.env.UPDATE_CHANNEL_ID, [
-            "DccOnXuH_L6",
-            "DcmaVC4k1YM",
+          async function listMessages(channelId) {
+            return discord(`/channels/${channelId}/messages?limit=100`);
+          }
+
+          async function deleteMessages(channelId, messages) {
+            for (const message of messages) {
+              await discord(`/channels/${channelId}/messages/${message.id}`, {
+                method: "DELETE",
+              });
+            }
+          }
+
+          function newestValid(messages, imageCount) {
+            return messages
+              .filter((message) => (message.attachments || []).length === imageCount)
+              .sort((left, right) => (BigInt(left.id) > BigInt(right.id) ? -1 : 1))[0] || null;
+          }
+
+          const recipeTarget = {
+            postId: "DccOnXuH_L6",
+            title: "新食譜情報",
+            date: "8月25日",
+          };
+          const pinkTarget = {
+            postId: "DcmaVC4k1YM",
+            title: "粉紅泡泡位置",
+            date: "8月28日",
+          };
+
+          const updateMessages = await listMessages(process.env.UPDATE_CHANNEL_ID);
+          const recipes = updateMessages.filter((message) => textMatches(message, recipeTarget));
+          const keepRecipe = newestValid(recipes, 3);
+          if (!keepRecipe) {
+            throw new Error("更新資料頻道找不到含 3 張圖片的正確食譜訊息，停止清理。");
+          }
+          const oldRecipes = recipes.filter((message) => message.id !== keepRecipe.id);
+          const misplacedPink = updateMessages.filter((message) =>
+            textMatches(message, pinkTarget),
+          );
+          await deleteMessages(process.env.UPDATE_CHANNEL_ID, [
+            ...oldRecipes,
+            ...misplacedPink.filter(
+              (message) => !oldRecipes.some((recipe) => recipe.id === message.id),
+            ),
           ]);
-          const deletedFromPink = await cleanupChannel(process.env.PINK_CHANNEL_ID, [
-            "DcmaVC4k1YM",
-          ]);
-          console.log(`清理完成：共刪除 ${deletedFromUpdates + deletedFromPink} 則訊息。`);
+
+          const pinkMessages = await listMessages(process.env.PINK_CHANNEL_ID);
+          const pinkMatches = pinkMessages.filter((message) => textMatches(message, pinkTarget));
+          const keepPink = newestValid(pinkMatches, 2);
+          if (!keepPink) {
+            throw new Error("粉紅泡泡頻道找不到含 2 張圖片的正確訊息，停止清理。");
+          }
+          const duplicatePink = pinkMatches.filter((message) => message.id !== keepPink.id);
+          await deleteMessages(process.env.PINK_CHANNEL_ID, duplicatePink);
+
+          console.log(
+            `清理完成：刪除舊食譜 ${oldRecipes.length} 則、錯頻道粉紅泡泡 ${misplacedPink.length} 則、粉紅泡泡重複 ${duplicatePink.length} 則。`,
+          );
+          console.log("已保留：食譜 3 張圖片、粉紅泡泡 2 張圖片。");
           NODE
-
-      - name: 補發正確食譜圖片
-        run: npm start -- --mode=backfill --post-id=DccOnXuH_L6 --category=recipe --force=true
-
-      - name: 補發粉紅泡泡位置圖
-        run: npm start -- --mode=backfill --post-id=DcmaVC4k1YM --category=pink-bubble --force=true
-
-      - name: 保存防重複狀態
-        shell: bash
-        run: |
-          git add data/state.json
-          if git diff --cached --quiet; then
-            echo "狀態沒有變更。"
-            exit 0
-          fi
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git commit -m "chore: 記錄 Discord 圖片分流修正 [skip ci]"
-          git pull --rebase origin "$GITHUB_REF_NAME"
-          git push origin "HEAD:$GITHUB_REF_NAME"
