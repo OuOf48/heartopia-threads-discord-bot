@@ -39,6 +39,62 @@ jobs:
       - name: 執行單元測試
         run: npm test
 
+      - name: 檢查指定貼文 DOM 範圍
+        shell: bash
+        run: |
+          node --input-type=module <<'NODE'
+          import { chromium } from "playwright-core";
+
+          const username = "oorainielove520oo";
+          const postId = "DcN8GDyERCe";
+          const browser = await chromium.launch({
+            executablePath: process.env.CHROME_PATH,
+            headless: true,
+            args: ["--disable-dev-shm-usage", "--no-sandbox"],
+          });
+          try {
+            const page = await browser.newPage({ viewport: { width: 1280, height: 1400 } });
+            await page.goto(`https://www.threads.com/@${username}/post/${postId}`, {
+              waitUntil: "domcontentloaded",
+              timeout: 60_000,
+            });
+            await page.waitForSelector(`a[href="/@${username}/post/${postId}"]`, {
+              timeout: 35_000,
+            });
+            await page.waitForTimeout(2_500);
+            const diagnostics = await page.evaluate(({ username, postId }) => {
+              const anchor = document.querySelector(`a[href="/@${username}/post/${postId}"]`);
+              const rows = [];
+              let element = anchor;
+              for (let depth = 0; element && depth < 16; depth += 1, element = element.parentElement) {
+                const images = Array.from(element.querySelectorAll("img"))
+                  .map((image) => {
+                    const rectangle = image.getBoundingClientRect();
+                    return {
+                      width: Math.round(rectangle.width),
+                      height: Math.round(rectangle.height),
+                      alt: image.getAttribute("alt"),
+                    };
+                  })
+                  .filter((image) => image.width >= 160 && image.height >= 160);
+                rows.push({
+                  depth,
+                  tag: element.tagName,
+                  role: element.getAttribute("role"),
+                  pressable: element.getAttribute("data-pressable-container"),
+                  textLength: (element.innerText || "").trim().length,
+                  imageCount: images.length,
+                  images,
+                });
+              }
+              return rows;
+            }, { username, postId });
+            console.log(`POST_DOM_DIAGNOSTICS=${JSON.stringify(diagnostics)}`);
+          } finally {
+            await browser.close();
+          }
+          NODE
+
       - name: 驗證食譜與流星雨原圖
         shell: bash
         run: |
