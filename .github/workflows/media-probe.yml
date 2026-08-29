@@ -46,6 +46,7 @@ jobs:
           import { classifyInformation } from "./src/information.js";
           import { downloadPostImages } from "./src/media.js";
           import { fetchThreadsPost } from "./src/threads.js";
+          import { mkdir, writeFile } from "node:fs/promises";
 
           const probes = [
             { postId: "DccOnXuH_L6", category: "recipe" },
@@ -60,6 +61,15 @@ jobs:
             }
             const files = await downloadPostImages(post.imageUrls, post.id);
             if (files.length === 0) throw new Error(`${probe.postId} 沒有取得圖片`);
+            const outputDirectory = `probe-images/${probe.postId}`;
+            await mkdir(outputDirectory, { recursive: true });
+            await Promise.all(
+              files.map((file) => writeFile(`${outputDirectory}/${file.filename}`, file.data)),
+            );
+            await writeFile(
+              `${outputDirectory}/urls.json`,
+              JSON.stringify(post.imageUrls, null, 2),
+            );
             console.log(
               JSON.stringify({
                 postId: probe.postId,
@@ -71,3 +81,8 @@ jobs:
           }
           NODE
 
+      - name: 保存候選圖片供檢查
+        uses: actions/upload-artifact@v4
+        with:
+          name: threads-image-probe
+          path: probe-images
