@@ -61,8 +61,11 @@ test("辨識粉紅泡泡位置並要求貼文圖片", () => {
   assert.equal(result.requireImages, true);
   assert.equal(result.summary, "粉紅泡泡🫧看位置圖~");
   assert.deepEqual(
-    selectInformationImageUrls(["bubble-1", "bubble-2", "other-guide"], result),
-    ["bubble-1", "bubble-2"],
+    selectInformationImageUrls(
+      ["event-guide", "bug-guide", "bubble-map-1", "bubble-map-2"],
+      result,
+    ),
+    ["bubble-map-1", "bubble-map-2"],
   );
 });
 
