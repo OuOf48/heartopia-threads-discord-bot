@@ -74,6 +74,7 @@ jobs:
                       width: Math.round(rectangle.width),
                       height: Math.round(rectangle.height),
                       alt: image.getAttribute("alt"),
+                      link: image.closest("a")?.getAttribute("href") || null,
                     };
                   })
                   .filter((image) => image.width >= 160 && image.height >= 160);
