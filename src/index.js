@@ -9,6 +9,7 @@ import {
 import { extractHeartopiaResources } from "./extract.js";
 import { classifyInformation, selectInformationImageUrls } from "./information.js";
 import { downloadPostImages } from "./media.js";
+import { selectFreshUnseenPosts } from "./monitor.js";
 import {
   hasPublication,
   loadState,
@@ -222,7 +223,6 @@ async function runBackfill(settings) {
 async function runMonitor(settings) {
   const posts = await fetchThreadsPosts(settings.username);
   let state = await loadState(settings.statePath);
-  const seen = new Set(state.seenPostIds);
 
   if (!state.initialized) {
     const latestResource = posts.find((post) => extractHeartopiaResources(post.text));
@@ -239,16 +239,24 @@ async function runMonitor(settings) {
     return;
   }
 
-  // Profile order is newest first; Discord should receive multiple missed posts
-  // from oldest to newest after an outage.
-  const unseenPosts = posts.filter((post) => !seen.has(post.id)).reverse();
+  const unseenCount = posts.filter((post) => !state.seenPostIds.includes(post.id)).length;
+  // Profile order is newest first. A missing ID alone is not proof of a new
+  // post because Threads can expose older cards on a later scan.
+  const unseenPosts = selectFreshUnseenPosts(posts, state);
   for (const post of unseenPosts) {
     state = await processPost(settings, post, state);
     state = rememberPost(state, post.id);
   }
 
+  // Every card visible in this successful scan becomes part of the baseline,
+  // including stale cards that were intentionally not published.
+  for (const post of [...posts].reverse()) state = rememberPost(state, post.id);
   state.lastSuccessfulCheck = new Date().toISOString();
   await saveState(settings.statePath, state);
+  const ignoredStaleCount = unseenCount - unseenPosts.length;
+  if (ignoredStaleCount > 0) {
+    console.log(`已忽略 ${ignoredStaleCount} 篇較早才載入的歷史貼文。`);
+  }
   console.log(
     unseenPosts.length === 0
       ? `檢查完成：沒有新貼文（共讀取 ${posts.length} 篇）。`
