@@ -1,0 +1,18 @@
+{
+  "name": "heartopia-threads-discord-bot",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Monitor a public Threads profile and relay Heartopia resource locations to Discord.",
+  "type": "module",
+  "scripts": {
+    "start": "node src/index.js",
+    "check": "node src/index.js --mode=dry-run",
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "dependencies": {
+    "playwright-core": "1.62.1"
+  }
+}
