@@ -62,35 +62,52 @@ function collectPostCards({ username, origin }) {
   const anchors = Array.from(document.querySelectorAll('a[href*="/post/"]'));
   const posts = [];
 
-  function postImageUrls(container, postId) {
-    const urls = [];
+  function postImageUrls(container, postId, postAnchor) {
+    const candidates = [];
+    const anchorTop = postAnchor.getBoundingClientRect().top;
     for (const image of container.querySelectorAll("img")) {
       const rectangle = image.getBoundingClientRect();
       // Profile avatars and small UI icons are below this size. Post media
       // retains its layout dimensions even while network image requests are
       // blocked, so URLs can be collected without downloading every image.
       if (rectangle.width < 160 || rectangle.height < 160) continue;
+      let linkedPostId = null;
       const mediaLink = image.closest('a[href*="/post/"]');
       if (mediaLink) {
         try {
           const mediaUrl = new URL(mediaLink.getAttribute("href"), origin);
           const mediaMatch = mediaUrl.pathname.match(/^\/@[^/]+\/post\/([^/]+)(?:\/media)?$/iu);
-          if (mediaMatch && mediaMatch[1] !== postId) {
-            // On an exact-post page Threads appends related posts after the
-            // requested carousel. Once that boundary appears, later unlinked
-            // images also belong to recommendations rather than this post.
-            if (urls.length > 0) break;
-            continue;
-          }
+          linkedPostId = mediaMatch?.[1] || null;
+          if (linkedPostId && linkedPostId !== postId) continue;
         } catch {
           continue;
         }
       }
       const source = image.currentSrc || image.getAttribute("src");
       if (!source || !/^https:\/\//iu.test(source)) continue;
-      urls.push(source);
+      candidates.push({
+        source,
+        top: rectangle.top,
+        linkedToTarget: linkedPostId === postId,
+      });
     }
-    return [...new Set(urls)];
+
+    // A /post/{id}/media link is the strongest ownership signal.
+    const linked = candidates.filter((candidate) => candidate.linkedToTarget);
+    if (linked.length > 0) return [...new Set(linked.map((candidate) => candidate.source))];
+
+    // Some carousels are unlinked. The requested post's carousel is the first
+    // horizontal image row below its timestamp; later rows are recommendations.
+    const belowAnchor = candidates.filter((candidate) => candidate.top >= anchorTop - 40);
+    if (belowAnchor.length === 0) return [];
+    const firstRowTop = Math.min(...belowAnchor.map((candidate) => candidate.top));
+    return [
+      ...new Set(
+        belowAnchor
+          .filter((candidate) => Math.abs(candidate.top - firstRowTop) <= 48)
+          .map((candidate) => candidate.source),
+      ),
+    ];
   }
 
   for (const anchor of anchors) {
@@ -123,7 +140,7 @@ function collectPostCards({ username, origin }) {
       url: `${origin}${url.pathname}`,
       text: (container.innerText || "").trim(),
       publishedAt: timeElement?.getAttribute("datetime") || null,
-      imageUrls: postImageUrls(container, match[1]),
+      imageUrls: postImageUrls(container, match[1], anchor),
     });
   }
 
@@ -211,6 +228,7 @@ export async function fetchThreadsPosts(usernameInput, options = {}) {
           .filter((value) => value && /^https:\/\//iu.test(value)),
       );
       targetPost.imageUrls = uniqueImageUrls([...targetPost.imageUrls, ...openGraphImages]);
+      targetPost.hasExactMedia = true;
       return [targetPost];
     }
 

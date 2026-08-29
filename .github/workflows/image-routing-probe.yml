@@ -1,0 +1,77 @@
+name: Threads 圖片分流精準驗證
+
+on:
+  push:
+    branches:
+      - codex/fix-image-routing
+
+permissions:
+  contents: read
+
+jobs:
+  image-routing-probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: 下載程式碼
+        uses: actions/checkout@v4
+
+      - name: 設定 Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: 安裝套件
+        run: npm ci
+
+      - name: 尋找系統 Chrome
+        shell: bash
+        run: |
+          chrome_path="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium || true)"
+          if [[ -z "$chrome_path" ]]; then
+            npx playwright-core install chromium
+            chrome_path="$(node -e "const { chromium } = require('playwright-core'); process.stdout.write(chromium.executablePath())")"
+          fi
+          echo "CHROME_PATH=$chrome_path" >> "$GITHUB_ENV"
+
+      - name: 執行單元測試
+        run: npm test
+
+      - name: 驗證三種圖片不混入推薦內容
+        shell: bash
+        run: |
+          node --input-type=module <<'NODE'
+          import { classifyInformation } from "./src/information.js";
+          import { downloadPostImages } from "./src/media.js";
+          import { fetchThreadsPost } from "./src/threads.js";
+
+          const probes = [
+            { postId: "DccOnXuH_L6", category: "recipe", expectedImages: 3 },
+            { postId: "DcmaVC4k1YM", category: "pink-bubble", expectedImages: 2 },
+            { postId: "DcN8GDyERCe", category: "meteor", expectedImages: 1 },
+          ];
+
+          for (const probe of probes) {
+            const post = await fetchThreadsPost("oorainielove520oo", probe.postId);
+            const categories = classifyInformation(post.text).map((item) => item.category);
+            if (!categories.includes(probe.category)) {
+              throw new Error(`${probe.postId} 未辨識為 ${probe.category}`);
+            }
+            const files = await downloadPostImages(post.imageUrls, post.id);
+            console.log(
+              JSON.stringify({
+                postId: probe.postId,
+                category: probe.category,
+                collectedUrls: post.imageUrls.length,
+                imageCount: files.length,
+              }),
+            );
+            if (files.length !== probe.expectedImages) {
+              throw new Error(
+                `${probe.postId} 預期 ${probe.expectedImages} 張，實際 ${files.length} 張`,
+              );
+            }
+          }
+          NODE
