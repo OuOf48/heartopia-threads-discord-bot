@@ -1,0 +1,140 @@
+name: 一次性修正 Discord 圖片分流
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/repair-routing-once.yml"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: heartopia-threads-monitor
+  cancel-in-progress: false
+
+jobs:
+  repair:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
+      DISCORD_CHANNEL_ID: ${{ vars.DISCORD_CHANNEL_ID }}
+      DISCORD_UPDATE_CHANNEL_ID: ${{ vars.DISCORD_UPDATE_CHANNEL_ID }}
+      DISCORD_METEOR_CHANNEL_ID: ${{ vars.DISCORD_METEOR_CHANNEL_ID }}
+      DISCORD_PINK_BUBBLE_CHANNEL_ID: ${{ vars.DISCORD_PINK_BUBBLE_CHANNEL_ID }}
+      THREADS_USERNAME: ${{ vars.THREADS_USERNAME }}
+
+    steps:
+      - name: 下載程式碼
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 設定 Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: 安裝套件
+        run: npm ci
+
+      - name: 尋找系統 Chrome
+        shell: bash
+        run: |
+          chrome_path="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium || true)"
+          if [[ -z "$chrome_path" ]]; then
+            echo "系統沒有 Chrome，安裝 Playwright Chromium。"
+            npx playwright-core install chromium
+            chrome_path="$(node -e "const { chromium } = require('playwright-core'); process.stdout.write(chromium.executablePath())")"
+          fi
+          echo "CHROME_PATH=$chrome_path" >> "$GITHUB_ENV"
+
+      - name: 刪除錯發與重複訊息
+        env:
+          UPDATE_CHANNEL_ID: "1519591991950839828"
+          PINK_CHANNEL_ID: "1525791309871317125"
+          DISCORD_BOT_ID: "1519597054362652752"
+        run: |
+          node --input-type=module <<'NODE'
+          const token = String(process.env.DISCORD_BOT_TOKEN || "").trim();
+          const botId = process.env.DISCORD_BOT_ID;
+          const apiOrigin = "https://discord.com/api/v10";
+          const sleep = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));
+
+          if (!token) throw new Error("缺少 DISCORD_BOT_TOKEN。 ");
+
+          async function discord(path, options = {}, attempt = 1) {
+            const response = await fetch(`${apiOrigin}${path}`, {
+              ...options,
+              headers: {
+                Authorization: `Bot ${token}`,
+                "User-Agent": "HeartopiaThreadsDiscordBot/1.0",
+                ...(options.headers || {}),
+              },
+            });
+            const body = response.status === 204 ? "" : await response.text();
+
+            if (response.status === 429 && attempt < 5) {
+              let retryAfter = 1;
+              try {
+                retryAfter = Number(JSON.parse(body).retry_after || 1);
+              } catch {
+                // 使用安全的預設等待秒數。
+              }
+              await sleep(Math.ceil(retryAfter * 1_000));
+              return discord(path, options, attempt + 1);
+            }
+
+            if (!response.ok) {
+              throw new Error(`Discord API ${response.status}: ${body.slice(0, 300)}`);
+            }
+            return body ? JSON.parse(body) : null;
+          }
+
+          async function cleanupChannel(channelId, postIds) {
+            const messages = await discord(`/channels/${channelId}/messages?limit=100`);
+            const matches = messages.filter((message) => {
+              if (message.author?.id !== botId) return false;
+              const urls = (message.embeds || []).map((embed) => String(embed.url || ""));
+              return urls.some((url) => postIds.some((postId) => url.includes(`/post/${postId}`)));
+            });
+
+            for (const message of matches) {
+              await discord(`/channels/${channelId}/messages/${message.id}`, { method: "DELETE" });
+            }
+            console.log(`頻道 ${channelId}：已刪除 ${matches.length} 則目標舊訊息。`);
+            return matches.length;
+          }
+
+          const deletedFromUpdates = await cleanupChannel(process.env.UPDATE_CHANNEL_ID, [
+            "DccOnXuH_L6",
+            "DcmaVC4k1YM",
+          ]);
+          const deletedFromPink = await cleanupChannel(process.env.PINK_CHANNEL_ID, [
+            "DcmaVC4k1YM",
+          ]);
+          console.log(`清理完成：共刪除 ${deletedFromUpdates + deletedFromPink} 則訊息。`);
+          NODE
+
+      - name: 補發正確食譜圖片
+        run: npm start -- --mode=backfill --post-id=DccOnXuH_L6 --category=recipe --force=true
+
+      - name: 補發粉紅泡泡位置圖
+        run: npm start -- --mode=backfill --post-id=DcmaVC4k1YM --category=pink-bubble --force=true
+
+      - name: 保存防重複狀態
+        shell: bash
+        run: |
+          git add data/state.json
+          if git diff --cached --quiet; then
+            echo "狀態沒有變更。"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "chore: 記錄 Discord 圖片分流修正 [skip ci]"
+          git pull --rebase origin "$GITHUB_REF_NAME"
+          git push origin "HEAD:$GITHUB_REF_NAME"
