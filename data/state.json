@@ -1,7 +1,11 @@
 {
   "version": 1,
-  "initialized": false,
-  "seenPostIds": [],
-  "lastSuccessfulCheck": null
+  "initialized": true,
+  "seenPostIds": [
+    "Dcj0m55E0LF",
+    "Dcj51Z2kxRd",
+    "DcmaVC4k1YM",
+    "DcmyAI2GKma"
+  ],
+  "lastSuccessfulCheck": "2026-08-29T08:55:48.801Z"
 }
-
