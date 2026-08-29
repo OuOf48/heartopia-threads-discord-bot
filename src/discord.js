@@ -42,11 +42,65 @@ export function buildTestMessage() {
   };
 }
 
+function dateFromText(text) {
+  const match = String(text || "").match(/(\d{1,2})\s*月\s*(\d{1,2})\s*日/iu);
+  return match ? `${Number(match[1])}月${Number(match[2])}日` : null;
+}
+
+export function buildInformationMessage({ username, post, information }) {
+  const date = dateFromText(post.text) || formatTaipeiDate(post.publishedAt);
+  return {
+    allowed_mentions: { parse: [] },
+    embeds: [
+      {
+        title: date ? `${information.title}｜${date}` : information.title,
+        url: post.url,
+        description: information.summary,
+        color: information.category === "meteor" ? 0x6f8cff : 0xf2ad5b,
+        footer: { text: `來源：@${username}` },
+        ...(post.publishedAt ? { timestamp: post.publishedAt } : {}),
+      },
+    ],
+  };
+}
+
 function wait(milliseconds) {
   return new Promise((resolve) => setTimeout(resolve, milliseconds));
 }
 
-export async function sendDiscordMessage({ token, channelId, payload, maxAttempts = 3 }) {
+function requestBody(payload, files) {
+  if (!files?.length) {
+    return {
+      body: JSON.stringify(payload),
+      headers: { "Content-Type": "application/json" },
+    };
+  }
+
+  const form = new FormData();
+  const attachments = files.map((file, index) => ({
+    id: index,
+    filename: file.filename,
+    description: file.description,
+  }));
+  form.append("payload_json", JSON.stringify({ ...payload, attachments }));
+  files.forEach((file, index) => {
+    form.append(
+      `files[${index}]`,
+      new Blob([file.data], { type: file.contentType }),
+      file.filename,
+    );
+  });
+  return { body: form, headers: {} };
+}
+
+export async function sendDiscordMessage({
+  token,
+  channelId,
+  payload,
+  files = [],
+  maxAttempts = 3,
+  fetchImpl = fetch,
+}) {
   if (!token || token.length < 20) throw new Error("尚未設定 DISCORD_BOT_TOKEN GitHub Secret。");
   assertSnowflake(channelId, "DISCORD_CHANNEL_ID");
 
@@ -55,14 +109,15 @@ export async function sendDiscordMessage({ token, channelId, payload, maxAttempt
 
   for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
     try {
-      const response = await fetch(url, {
+      const request = requestBody(payload, files);
+      const response = await fetchImpl(url, {
         method: "POST",
         headers: {
           Authorization: `Bot ${token}`,
-          "Content-Type": "application/json",
           "User-Agent": "HeartopiaThreadsDiscordBot/1.0",
+          ...request.headers,
         },
-        body: JSON.stringify(payload),
+        body: request.body,
       });
 
       if (response.ok) return await response.json();
@@ -96,4 +151,3 @@ export async function sendDiscordMessage({ token, channelId, payload, maxAttempt
 
   throw lastError || new Error("Discord 訊息發送失敗。");
 }
-

@@ -1,19 +1,28 @@
 # 心動小鎮 Threads → Discord 小助手
 
-每 30 分鐘檢查一次 `@oorainielove520oo` 的公開 Threads 貼文，只擷取每日新聞中的：
+每 30 分鐘檢查一次 `@oorainielove520oo` 的公開 Threads 貼文，依情報種類分流到 Discord：
 
 ```text
 今日溜溜橡木：家園04區　螢石：家園11區
 ```
 
-其他閒聊、天氣預報、慶典說明與宣傳文字不會傳進 Discord。程式也支援：
+目前支援三類高信心情報：
+
+- `🪓 溜溜橡木和螢石`：只保留每日橡木與螢石地點
+- `📜 更新資料`：辨識「新食譜、食譜有 N 個、食譜總覽」等內容並附上貼文原圖
+- `🌠 流星雨`：先發布流星雨時間預報；作者後續發布位置地圖時再附圖發布
+
+個人閒聊、普通的「去商店買食譜」敘述與不確定內容不會傳進 Discord。程式也支援：
 
 - 橡木與螢石分開列出的貼文
 - `今日溜溜橡木+螢石：家園12區` 的共用區域格式
 - `溫泉山遺跡`、`靈動松林老家` 等非家園地點
 - 第一次啟動只發送最新一篇符合的貼文
 - 中斷後依時間順序補送遺漏的新貼文
-- 貼文 ID 防重複、Discord 限流重試與安全的 Mention 設定
+- 同一篇貼文可分流到不同頻道，並以「貼文 ID＋情報分類」防止重複
+- 只擷取貼文的大圖，排除頭像與介面圖示
+- 將 Threads 圖片下載後重新上傳 Discord，避免暫時圖片網址失效
+- Discord 限流重試、附件大小防護與安全的 Mention 設定
 
 ## 必要設定
 
@@ -32,7 +41,11 @@ Bot Token 絕對不要放在 Variables、README、程式碼或聊天訊息中。
 | 名稱 | 內容 |
 |---|---|
 | `DISCORD_CHANNEL_ID` | `1519592044283170897` |
+| `DISCORD_UPDATE_CHANNEL_ID` | `1519591991950839828` |
+| `DISCORD_METEOR_CHANNEL_ID` | `1519592074972893195` |
 | `THREADS_USERNAME` | `oorainielove520oo`（不用加 `@`） |
+
+三個頻道 ID 已有程式預設值；仍建議建立同名 Variables，日後換頻道時不用修改程式。
 
 ## GitHub Actions 權限
 
@@ -51,6 +64,7 @@ Bot Token 絕對不要放在 Variables、README、程式碼或聊天訊息中。
 - 查看頻道
 - 傳送訊息
 - 嵌入連結
+- 附加檔案
 
 不需要開啟 Message Content Intent，也不需要提供 Discord 帳號密碼。
 
@@ -72,6 +86,7 @@ Bot Token 絕對不要放在 Variables、README、程式碼或聊天訊息中。
 | `discord-test` | 測試 Token、頻道 ID 與機器人權限 | 是 | 否 |
 | `dry-run` | 測試 Threads 讀取和文字解析 | 否 | 否 |
 | `monitor` | 正式監測 | 有新情報時 | 是 |
+| `backfill` | 管理者指定單篇貼文與分類補發 | 是 | 是 |
 
 ## 本機開發
 
@@ -87,5 +102,4 @@ CHROME_PATH=/path/to/chrome THREADS_USERNAME=oorainielove520oo npm run check
 
 ## 注意事項
 
-這個版本只讀取公開 Threads 頁面，不需要 Threads 密碼，也不使用付費 AI API。Threads 若大幅修改網頁結構，Action 會明確失敗並留下錯誤紀錄，不會把整篇不相關內容誤傳到 Discord。
-
+這個版本只讀取公開 Threads 頁面，不需要 Threads 密碼，也不使用付費 AI API。圖片分類優先依貼文文字中的高信心規則判斷，不會單憑模糊圖片猜測。Threads 若大幅修改網頁結構，Action 會明確失敗並留下錯誤紀錄，不會把整篇不相關內容誤傳到 Discord。

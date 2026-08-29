@@ -41,6 +41,21 @@ function collectPostCards({ username, origin }) {
   const anchors = Array.from(document.querySelectorAll('a[href*="/post/"]'));
   const posts = [];
 
+  function postImageUrls(container) {
+    const urls = [];
+    for (const image of container.querySelectorAll("img")) {
+      const rectangle = image.getBoundingClientRect();
+      // Profile avatars and small UI icons are below this size. Post media
+      // retains its layout dimensions even while network image requests are
+      // blocked, so URLs can be collected without downloading every image.
+      if (rectangle.width < 160 || rectangle.height < 160) continue;
+      const source = image.currentSrc || image.getAttribute("src");
+      if (!source || !/^https:\/\//iu.test(source)) continue;
+      urls.push(source);
+    }
+    return [...new Set(urls)];
+  }
+
   for (const anchor of anchors) {
     const rawHref = anchor.getAttribute("href");
     if (!rawHref) continue;
@@ -71,6 +86,7 @@ function collectPostCards({ username, origin }) {
       url: `${origin}${url.pathname}`,
       text: (container.innerText || "").trim(),
       publishedAt: timeElement?.getAttribute("datetime") || null,
+      imageUrls: postImageUrls(container),
     });
   }
 
@@ -79,9 +95,16 @@ function collectPostCards({ username, origin }) {
   const deduplicated = new Map();
   for (const post of posts) {
     const previous = deduplicated.get(post.id);
-    if (!previous || post.text.length > previous.text.length) {
+    if (!previous) {
       deduplicated.set(post.id, post);
+      continue;
     }
+
+    const richer = post.text.length > previous.text.length ? post : previous;
+    deduplicated.set(post.id, {
+      ...richer,
+      imageUrls: [...new Set([...previous.imageUrls, ...post.imageUrls])],
+    });
   }
 
   return Array.from(deduplicated.values());
@@ -108,30 +131,50 @@ export async function fetchThreadsPosts(usernameInput, options = {}) {
     });
     const page = await context.newPage();
 
-    // Images and videos are unnecessary for text extraction and make scheduled
-    // runs slower. Scripts and XHR requests remain enabled.
+    // Profile scans only need text, so skip heavy assets. Exact-post requests
+    // are rare and keep images enabled so every item in a carousel is present
+    // in the DOM before its signed CDN URL is collected.
     await page.route("**/*", async (route) => {
       const type = route.request().resourceType();
-      if (["image", "media", "font"].includes(type)) {
+      if (["media", "font"].includes(type) || (type === "image" && !options.postId)) {
         await route.abort();
       } else {
         await route.continue();
       }
     });
 
-    const profileUrl = `${origin}/@${username}`;
-    await page.goto(profileUrl, { waitUntil: "domcontentloaded", timeout: 60_000 });
+    const targetUrl = options.postId
+      ? `${origin}/@${username}/post/${encodeURIComponent(options.postId)}`
+      : `${origin}/@${username}`;
+    await page.goto(targetUrl, { waitUntil: "domcontentloaded", timeout: 60_000 });
     await page.waitForSelector(`a[href^="/@${username}/post/"]`, { timeout: 35_000 });
     await page.waitForTimeout(2_500);
 
     // A small scroll prompts lazy-loaded profile cards without loading the
     // account's full history.
-    await page.evaluate(() => window.scrollBy(0, Math.max(window.innerHeight, 900)));
-    await page.waitForTimeout(1_500);
+    if (!options.postId) {
+      await page.evaluate(() => window.scrollBy(0, Math.max(window.innerHeight, 900)));
+      await page.waitForTimeout(1_500);
+    }
 
     const posts = await page.evaluate(collectPostCards, { username, origin });
     if (!Array.isArray(posts) || posts.length === 0) {
       throw new Error("Threads 公開頁面沒有讀到任何貼文，可能暫時限流或版面已更新。");
+    }
+
+    if (options.postId) {
+      const targetPost = posts.find((post) => post.id === options.postId);
+      if (!targetPost) {
+        throw new Error(`Threads 找不到指定貼文：${options.postId}`);
+      }
+
+      const openGraphImages = await page.evaluate(() =>
+        Array.from(document.querySelectorAll('meta[property="og:image"]'))
+          .map((element) => element.getAttribute("content"))
+          .filter((value) => value && /^https:\/\//iu.test(value)),
+      );
+      targetPost.imageUrls = [...new Set([...targetPost.imageUrls, ...openGraphImages])];
+      return [targetPost];
     }
 
     return posts;
@@ -140,5 +183,13 @@ export async function fetchThreadsPosts(usernameInput, options = {}) {
   }
 }
 
-export { collectPostCards };
+export async function fetchThreadsPost(username, postId, options = {}) {
+  const normalizedPostId = String(postId ?? "").trim();
+  if (!/^[A-Za-z0-9_-]{5,64}$/u.test(normalizedPostId)) {
+    throw new Error("Threads 貼文 ID 格式不正確。");
+  }
+  const posts = await fetchThreadsPosts(username, { ...options, postId: normalizedPostId });
+  return posts[0];
+}
 
+export { collectPostCards };
