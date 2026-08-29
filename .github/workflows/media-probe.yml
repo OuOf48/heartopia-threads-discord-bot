@@ -106,8 +106,8 @@ jobs:
           import { mkdir, writeFile } from "node:fs/promises";
 
           const probes = [
-            { postId: "DccOnXuH_L6", category: "recipe" },
-            { postId: "DcN8GDyERCe", category: "meteor" },
+            { postId: "DccOnXuH_L6", category: "recipe", expectedImages: 3 },
+            { postId: "DcN8GDyERCe", category: "meteor", expectedImages: 1 },
           ];
 
           for (const probe of probes) {
@@ -117,7 +117,11 @@ jobs:
               throw new Error(`${probe.postId} 未辨識為 ${probe.category}`);
             }
             const files = await downloadPostImages(post.imageUrls, post.id);
-            if (files.length === 0) throw new Error(`${probe.postId} 沒有取得圖片`);
+            if (files.length !== probe.expectedImages) {
+              throw new Error(
+                `${probe.postId} 預期 ${probe.expectedImages} 張，實際 ${files.length} 張`,
+              );
+            }
             const outputDirectory = `probe-images/${probe.postId}`;
             await mkdir(outputDirectory, { recursive: true });
             await Promise.all(

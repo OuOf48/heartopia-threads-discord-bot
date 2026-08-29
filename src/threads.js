@@ -3,6 +3,27 @@ import { chromium } from "playwright-core";
 
 const DEFAULT_PROFILE_ORIGIN = "https://www.threads.com";
 
+function uniqueImageUrls(values) {
+  const unique = new Map();
+  for (const value of values) {
+    try {
+      const url = new URL(value);
+      const hostname = url.hostname.toLowerCase();
+      // Threads often exposes the same CDN file twice: a small DOM rendition
+      // and a full-size Open Graph rendition. The pathname identifies the
+      // underlying media while the query string only changes its rendition.
+      const key =
+        hostname.endsWith(".cdninstagram.com") || hostname.endsWith(".fbcdn.net")
+          ? url.pathname
+          : url.href;
+      unique.set(key, value);
+    } catch {
+      // Ignore malformed media candidates from the page.
+    }
+  }
+  return [...unique.values()];
+}
+
 function normalizeUsername(value) {
   const username = String(value ?? "").trim().replace(/^@/u, "");
   if (!/^[A-Za-z0-9._]{1,64}$/u.test(username)) {
@@ -41,7 +62,7 @@ function collectPostCards({ username, origin }) {
   const anchors = Array.from(document.querySelectorAll('a[href*="/post/"]'));
   const posts = [];
 
-  function postImageUrls(container) {
+  function postImageUrls(container, postId) {
     const urls = [];
     for (const image of container.querySelectorAll("img")) {
       const rectangle = image.getBoundingClientRect();
@@ -49,6 +70,16 @@ function collectPostCards({ username, origin }) {
       // retains its layout dimensions even while network image requests are
       // blocked, so URLs can be collected without downloading every image.
       if (rectangle.width < 160 || rectangle.height < 160) continue;
+      const mediaLink = image.closest('a[href*="/post/"]');
+      if (mediaLink) {
+        try {
+          const mediaUrl = new URL(mediaLink.getAttribute("href"), origin);
+          const mediaMatch = mediaUrl.pathname.match(/^\/@[^/]+\/post\/([^/]+)(?:\/media)?$/iu);
+          if (mediaMatch && mediaMatch[1] !== postId) continue;
+        } catch {
+          continue;
+        }
+      }
       const source = image.currentSrc || image.getAttribute("src");
       if (!source || !/^https:\/\//iu.test(source)) continue;
       urls.push(source);
@@ -86,7 +117,7 @@ function collectPostCards({ username, origin }) {
       url: `${origin}${url.pathname}`,
       text: (container.innerText || "").trim(),
       publishedAt: timeElement?.getAttribute("datetime") || null,
-      imageUrls: postImageUrls(container),
+      imageUrls: postImageUrls(container, match[1]),
     });
   }
 
@@ -173,7 +204,7 @@ export async function fetchThreadsPosts(usernameInput, options = {}) {
           .map((element) => element.getAttribute("content"))
           .filter((value) => value && /^https:\/\//iu.test(value)),
       );
-      targetPost.imageUrls = [...new Set([...targetPost.imageUrls, ...openGraphImages])];
+      targetPost.imageUrls = uniqueImageUrls([...targetPost.imageUrls, ...openGraphImages]);
       return [targetPost];
     }
 
@@ -192,4 +223,4 @@ export async function fetchThreadsPost(username, postId, options = {}) {
   return posts[0];
 }
 
-export { collectPostCards };
+export { collectPostCards, uniqueImageUrls };
