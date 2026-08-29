@@ -1,0 +1,169 @@
+name: 一次性檢查並補發今日流星雨
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - ".github/workflows/check-meteor-once.yml"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: heartopia-threads-monitor
+  cancel-in-progress: false
+
+jobs:
+  check-and-send:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      DISCORD_BOT_TOKEN: ${{ secrets.DISCORD_BOT_TOKEN }}
+      DISCORD_CHANNEL_ID: ${{ vars.DISCORD_CHANNEL_ID }}
+      DISCORD_UPDATE_CHANNEL_ID: ${{ vars.DISCORD_UPDATE_CHANNEL_ID }}
+      DISCORD_METEOR_CHANNEL_ID: ${{ vars.DISCORD_METEOR_CHANNEL_ID }}
+      DISCORD_PINK_BUBBLE_CHANNEL_ID: ${{ vars.DISCORD_PINK_BUBBLE_CHANNEL_ID }}
+      THREADS_USERNAME: ${{ vars.THREADS_USERNAME }}
+      METEOR_CHANNEL_ID: "1519592074972893195"
+
+    steps:
+      - name: 下載程式碼
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 設定 Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: 安裝套件
+        run: npm ci
+
+      - name: 尋找系統 Chrome
+        shell: bash
+        run: |
+          chrome_path="$(command -v google-chrome || command -v google-chrome-stable || command -v chromium || true)"
+          if [[ -z "$chrome_path" ]]; then
+            npx playwright-core install chromium
+            chrome_path="$(node -e "const { chromium } = require('playwright-core'); process.stdout.write(chromium.executablePath())")"
+          fi
+          echo "CHROME_PATH=$chrome_path" >> "$GITHUB_ENV"
+
+      - name: 尋找最近 24 小時的流星雨位置貼文
+        id: find
+        run: |
+          node --input-type=module <<'NODE'
+          import { appendFileSync } from "node:fs";
+          import { classifyInformation } from "./src/information.js";
+          import { fetchThreadsPosts } from "./src/threads.js";
+
+          const username = String(process.env.THREADS_USERNAME || "oorainielove520oo")
+            .trim()
+            .replace(/^@/u, "");
+          const posts = await fetchThreadsPosts(username);
+          const cutoff = Date.now() - 24 * 60 * 60 * 1_000;
+          const target = posts.find((post) => {
+            const publishedAt = Date.parse(post.publishedAt || "");
+            if (!Number.isFinite(publishedAt) || publishedAt < cutoff) return false;
+            return classifyInformation(post.text).some(
+              (item) => item.category === "meteor" && item.attachImages,
+            );
+          });
+
+          if (!target) {
+            throw new Error("最近 24 小時內找不到流星雨位置圖片貼文。");
+          }
+          appendFileSync(process.env.GITHUB_OUTPUT, `post_id=${target.id}\n`);
+          console.log(`找到今日流星雨位置貼文：${target.id}（${target.publishedAt}）`);
+          NODE
+
+      - name: 檢查 Discord 是否已傳送同一篇
+        id: discord
+        env:
+          POST_ID: ${{ steps.find.outputs.post_id }}
+        run: |
+          node --input-type=module <<'NODE'
+          import { appendFileSync } from "node:fs";
+
+          const token = String(process.env.DISCORD_BOT_TOKEN || "").trim();
+          const channelId = process.env.METEOR_CHANNEL_ID;
+          const postId = process.env.POST_ID;
+          const cutoff = Date.now() - 24 * 60 * 60 * 1_000;
+          if (!token) throw new Error("缺少 DISCORD_BOT_TOKEN。");
+
+          const response = await fetch(
+            `https://discord.com/api/v10/channels/${channelId}/messages?limit=100`,
+            {
+              headers: {
+                Authorization: `Bot ${token}`,
+                "User-Agent": "HeartopiaThreadsDiscordBot/1.0",
+              },
+            },
+          );
+          const body = await response.text();
+          if (!response.ok) {
+            throw new Error(`Discord API ${response.status}: ${body.slice(0, 300)}`);
+          }
+
+          const messages = JSON.parse(body);
+          const alreadySent = messages.some((message) => {
+            const sentAt = Date.parse(message.timestamp || "");
+            if (!message.author?.bot || !Number.isFinite(sentAt) || sentAt < cutoff) return false;
+            const samePost = (message.embeds || []).some((embed) =>
+              String(embed.url || "").includes(`/post/${postId}`),
+            );
+            return samePost && (message.attachments || []).length > 0;
+          });
+
+          appendFileSync(
+            process.env.GITHUB_OUTPUT,
+            `should_send=${alreadySent ? "false" : "true"}\n`,
+          );
+          console.log(
+            alreadySent
+              ? "Discord 最近 24 小時已傳送同一篇流星雨位置，不重複發布。"
+              : "Discord 最近 24 小時尚未傳送同一篇，準備補發一次。",
+          );
+          NODE
+
+      - name: 補發今日流星雨位置
+        if: steps.discord.outputs.should_send == 'true'
+        run: npm start -- --mode=backfill --post-id="${{ steps.find.outputs.post_id }}" --category=meteor --force=true
+
+      - name: 記錄已處理狀態
+        env:
+          POST_ID: ${{ steps.find.outputs.post_id }}
+        run: |
+          node --input-type=module <<'NODE'
+          import { resolve } from "node:path";
+          import {
+            loadState,
+            rememberPost,
+            rememberPublication,
+            saveState,
+          } from "./src/state.js";
+
+          const statePath = resolve("data/state.json");
+          let state = await loadState(statePath);
+          state = rememberPublication(state, process.env.POST_ID, "meteor");
+          state = rememberPost(state, process.env.POST_ID);
+          state.lastSuccessfulCheck = new Date().toISOString();
+          await saveState(statePath, state);
+          NODE
+
+      - name: 保存防重複狀態
+        shell: bash
+        run: |
+          git add data/state.json
+          if git diff --cached --quiet; then
+            echo "狀態沒有變更。"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "chore: 記錄今日流星雨已處理 [skip ci]"
+          git pull --rebase origin "$GITHUB_REF_NAME"
+          git push origin "HEAD:$GITHUB_REF_NAME"
