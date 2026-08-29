@@ -97,7 +97,8 @@ export function classifyInformation(rawText) {
       summary: pinkBubbleSummary(lines),
       attachImages: true,
       requireImages: true,
-      imageSelection: { mode: "head", count: 2 },
+      // The location maps are the final two slides in the daily-news carousel.
+      imageSelection: { mode: "tail", count: 2 },
     });
   }
 
