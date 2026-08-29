@@ -106,7 +106,7 @@ jobs:
           import { mkdir, writeFile } from "node:fs/promises";
 
           const probes = [
-            { postId: "DccOnXuH_L6", category: "recipe", expectedImages: 10 },
+            { postId: "DccOnXuH_L6", category: "recipe", expectedImages: 9 },
             { postId: "DcN8GDyERCe", category: "meteor", expectedImages: 1 },
           ];
 

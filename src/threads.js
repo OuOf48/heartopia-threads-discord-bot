@@ -75,7 +75,13 @@ function collectPostCards({ username, origin }) {
         try {
           const mediaUrl = new URL(mediaLink.getAttribute("href"), origin);
           const mediaMatch = mediaUrl.pathname.match(/^\/@[^/]+\/post\/([^/]+)(?:\/media)?$/iu);
-          if (mediaMatch && mediaMatch[1] !== postId) continue;
+          if (mediaMatch && mediaMatch[1] !== postId) {
+            // On an exact-post page Threads appends related posts after the
+            // requested carousel. Once that boundary appears, later unlinked
+            // images also belong to recommendations rather than this post.
+            if (urls.length > 0) break;
+            continue;
+          }
         } catch {
           continue;
         }
