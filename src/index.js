@@ -7,7 +7,7 @@ import {
   sendDiscordMessage,
 } from "./discord.js";
 import { extractHeartopiaResources } from "./extract.js";
-import { classifyInformation } from "./information.js";
+import { classifyInformation, selectInformationImageUrls } from "./information.js";
 import { downloadPostImages } from "./media.js";
 import {
   hasPublication,
@@ -22,6 +22,7 @@ const DEFAULT_STATE_PATH = fileURLToPath(new URL("../data/state.json", import.me
 const DEFAULT_RESOURCE_CHANNEL_ID = "1519592044283170897";
 const DEFAULT_UPDATE_CHANNEL_ID = "1519591991950839828";
 const DEFAULT_METEOR_CHANNEL_ID = "1519592074972893195";
+const DEFAULT_PINK_BUBBLE_CHANNEL_ID = "1525791309871317125";
 
 function argumentValue(name) {
   const prefix = `--${name}=`;
@@ -51,6 +52,9 @@ function config() {
     meteorChannelId: String(
       process.env.DISCORD_METEOR_CHANNEL_ID || DEFAULT_METEOR_CHANNEL_ID,
     ).trim(),
+    pinkBubbleChannelId: String(
+      process.env.DISCORD_PINK_BUBBLE_CHANNEL_ID || DEFAULT_PINK_BUBBLE_CHANNEL_ID,
+    ).trim(),
     botToken: String(process.env.DISCORD_BOT_TOKEN || "").trim(),
     statePath: resolve(process.env.STATE_PATH || DEFAULT_STATE_PATH),
     backfillPostId: String(
@@ -59,6 +63,9 @@ function config() {
     backfillCategory: String(
       argumentValue("category") || process.env.BACKFILL_CATEGORY || "",
     ).trim(),
+    forceBackfill: /^(?:1|true|yes)$/iu.test(
+      String(argumentValue("force") || process.env.BACKFILL_FORCE || ""),
+    ),
   };
 }
 
@@ -66,6 +73,7 @@ function channelFor(settings, category) {
   if (category === "resource") return settings.resourceChannelId;
   if (category === "recipe") return settings.updateChannelId;
   if (category === "meteor") return settings.meteorChannelId;
+  if (category === "pink-bubble") return settings.pinkBubbleChannelId;
   throw new Error(`沒有設定情報分類頻道：${category}`);
 }
 
@@ -126,11 +134,13 @@ function eventsForPost(post) {
   return informationEvents;
 }
 
-async function mediaFilesFor(settings, post) {
+async function mediaFilesFor(settings, post, information) {
   // Open the exact post to collect every image in a carousel. This extra page
   // load occurs only for high-confidence image categories, not every check.
-  const detailedPost = await fetchThreadsPost(settings.username, post.id);
-  const imageUrls = [...new Set([...(post.imageUrls || []), ...(detailedPost.imageUrls || [])])];
+  const detailedPost = post.hasExactMedia
+    ? post
+    : await fetchThreadsPost(settings.username, post.id);
+  const imageUrls = selectInformationImageUrls(detailedPost.imageUrls || [], information);
   return downloadPostImages(imageUrls, post.id);
 }
 
@@ -139,10 +149,10 @@ async function processPost(settings, post, state, options = {}) {
   const events = eventsForPost(post).filter(
     (event) => !onlyCategory || event.category === onlyCategory,
   );
-  let imageFilesPromise = null;
+  const imageFilesPromises = new Map();
 
   for (const event of events) {
-    if (hasPublication(state, post.id, event.category)) continue;
+    if (!options.force && hasPublication(state, post.id, event.category)) continue;
 
     if (event.category === "resource") {
       const payload = buildResourceMessage({
@@ -159,8 +169,13 @@ async function processPost(settings, post, state, options = {}) {
     } else {
       let files = [];
       if (event.information.attachImages) {
-        imageFilesPromise ||= mediaFilesFor(settings, post);
-        files = await imageFilesPromise;
+        if (!imageFilesPromises.has(event.category)) {
+          imageFilesPromises.set(
+            event.category,
+            mediaFilesFor(settings, post, event.information),
+          );
+        }
+        files = await imageFilesPromises.get(event.category);
       }
       if (event.information.requireImages && files.length === 0) {
         throw new Error(`${event.information.title}符合條件，但沒有取得任何貼文圖片。`);
@@ -188,14 +203,15 @@ async function processPost(settings, post, state, options = {}) {
 
 async function runBackfill(settings) {
   if (!settings.backfillPostId) throw new Error("backfill 模式需要 BACKFILL_POST_ID。");
-  if (!["resource", "recipe", "meteor"].includes(settings.backfillCategory)) {
-    throw new Error("backfill 模式需要 resource、recipe 或 meteor 分類。");
+  if (!["resource", "recipe", "meteor", "pink-bubble"].includes(settings.backfillCategory)) {
+    throw new Error("backfill 模式需要 resource、recipe、meteor 或 pink-bubble 分類。");
   }
 
   const post = await fetchThreadsPost(settings.username, settings.backfillPostId);
   let state = await loadState(settings.statePath);
   state = await processPost(settings, post, state, {
     onlyCategory: settings.backfillCategory,
+    force: settings.forceBackfill,
   });
   state = rememberPost(state, post.id);
   state.lastSuccessfulCheck = new Date().toISOString();
@@ -252,4 +268,3 @@ main().catch((error) => {
   console.error(`執行失敗：${error?.message || error}`);
   process.exitCode = 1;
 });
-

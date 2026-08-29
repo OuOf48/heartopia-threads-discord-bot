@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { classifyInformation } from "../src/information.js";
+import {
+  classifyInformation,
+  selectInformationImageUrls,
+} from "../src/information.js";
 
 test("辨識高信心食譜貼文並保留相關段落", () => {
   const results = classifyInformation(`
@@ -48,7 +51,21 @@ test("辨識流星雨位置圖片貼文並包含下一行地點", () => {
   assert.equal(result.summary, "今日流星雨🌠位置~\n朵朵在花田巴士站🚏");
 });
 
+test("辨識粉紅泡泡位置並要求貼文圖片", () => {
+  const results = classifyInformation(`
+    Day 1表情泡泡：森林小鹿塔+紫光海灘
+    粉紅泡泡🫧看位置圖～
+  `);
+  const result = results.find((item) => item.category === "pink-bubble");
+  assert.equal(result.title, "🫧 粉紅泡泡位置");
+  assert.equal(result.requireImages, true);
+  assert.equal(result.summary, "粉紅泡泡🫧看位置圖~");
+  assert.deepEqual(
+    selectInformationImageUrls(["bubble-1", "bubble-2", "other-guide"], result),
+    ["bubble-1", "bubble-2"],
+  );
+});
+
 test("忽略無關個人動態", () => {
   assert.deepEqual(classifyInformation("最麻煩的完成✅ 總算安心了，可以補眠了。"), []);
 });
-

@@ -49,6 +49,11 @@ function dateFromText(text) {
 
 export function buildInformationMessage({ username, post, information }) {
   const date = dateFromText(post.text) || formatTaipeiDate(post.publishedAt);
+  const colors = {
+    meteor: 0x6f8cff,
+    "pink-bubble": 0xff76b7,
+    recipe: 0xf2ad5b,
+  };
   return {
     allowed_mentions: { parse: [] },
     embeds: [
@@ -56,7 +61,7 @@ export function buildInformationMessage({ username, post, information }) {
         title: date ? `${information.title}｜${date}` : information.title,
         url: post.url,
         description: information.summary,
-        color: information.category === "meteor" ? 0x6f8cff : 0xf2ad5b,
+        color: colors[information.category] || 0xf2ad5b,
         footer: { text: `來源：@${username}` },
         ...(post.publishedAt ? { timestamp: post.publishedAt } : {}),
       },

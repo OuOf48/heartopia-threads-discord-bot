@@ -4,6 +4,7 @@ const RECIPE_PATTERN =
 const METEOR_PATTERN = /流星雨/iu;
 const METEOR_LOCATION_PATTERN =
   /(?:流星雨[^\n]{0,20}(?:位置|地圖)|(?:位置|地圖)[^\n]{0,20}流星雨)/iu;
+const PINK_BUBBLE_PATTERN = /粉紅(?:色)?泡泡/iu;
 
 function normalizedLines(rawText) {
   return String(rawText ?? "")
@@ -50,6 +51,12 @@ function meteorSummary(lines, isLocation) {
   return clip(selected.join("\n"), 500);
 }
 
+function pinkBubbleSummary(lines) {
+  const start = lines.findIndex((line) => PINK_BUBBLE_PATTERN.test(line));
+  if (start < 0) return null;
+  return clip(lines.slice(start, start + 2).join("\n"), 500);
+}
+
 /**
  * Classify only high-confidence, actionable information.
  *
@@ -83,6 +90,26 @@ export function classifyInformation(rawText) {
     });
   }
 
+  if (PINK_BUBBLE_PATTERN.test(text)) {
+    results.push({
+      category: "pink-bubble",
+      title: "🫧 粉紅泡泡位置",
+      summary: pinkBubbleSummary(lines),
+      attachImages: true,
+      requireImages: true,
+      imageSelection: { mode: "head", count: 2 },
+    });
+  }
+
   return results.filter((result) => result.summary);
 }
 
+export function selectInformationImageUrls(imageUrls, information) {
+  const urls = [...imageUrls];
+  const selection = information?.imageSelection;
+  if (!selection) return urls;
+  const count = Math.max(0, Number(selection.count) || 0);
+  if (selection.mode === "head") return urls.slice(0, count);
+  if (selection.mode === "tail") return urls.slice(-count);
+  return urls;
+}

@@ -42,3 +42,18 @@ test("拒絕非圖片回應", async () => {
   );
 });
 
+test("不同網址下載到相同圖片內容時只保留一張", async () => {
+  const urls = [
+    "https://scontent-a.cdninstagram.com/first.jpg",
+    "https://scontent-b.cdninstagram.com/second.jpg",
+  ];
+  const files = await downloadPostImages(urls, "post_123", {
+    fetchImpl: async () =>
+      new Response(new Uint8Array([9, 8, 7]), {
+        status: 200,
+        headers: { "content-type": "image/jpeg" },
+      }),
+  });
+
+  assert.equal(files.length, 1);
+});

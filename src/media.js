@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto";
+
 const MAX_IMAGE_FILES = 10;
 const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
 const MAX_TOTAL_IMAGE_BYTES = 20 * 1024 * 1024;
@@ -48,6 +50,7 @@ export async function downloadPostImages(imageUrls, postId, options = {}) {
   const fetchImpl = options.fetchImpl || fetch;
   const uniqueUrls = [...new Set(imageUrls)].filter(isAllowedThreadsImageUrl).slice(0, MAX_IMAGE_FILES);
   const files = [];
+  const contentHashes = new Set();
   let totalBytes = 0;
 
   for (const [index, url] of uniqueUrls.entries()) {
@@ -79,7 +82,10 @@ export async function downloadPostImages(imageUrls, postId, options = {}) {
       throw new Error("Threads 圖片大小不正確或超過 8 MiB。");
     }
     if (totalBytes + data.byteLength > MAX_TOTAL_IMAGE_BYTES) break;
+    const contentHash = createHash("sha256").update(data).digest("hex");
+    if (contentHashes.has(contentHash)) continue;
 
+    contentHashes.add(contentHash);
     totalBytes += data.byteLength;
     files.push({
       data,
