@@ -97,8 +97,19 @@ export function classifyInformation(rawText) {
       summary: pinkBubbleSummary(lines),
       attachImages: true,
       requireImages: true,
+      imageSelection: { mode: "head", count: 2 },
     });
   }
 
   return results.filter((result) => result.summary);
+}
+
+export function selectInformationImageUrls(imageUrls, information) {
+  const urls = [...imageUrls];
+  const selection = information?.imageSelection;
+  if (!selection) return urls;
+  const count = Math.max(0, Number(selection.count) || 0);
+  if (selection.mode === "head") return urls.slice(0, count);
+  if (selection.mode === "tail") return urls.slice(-count);
+  return urls;
 }

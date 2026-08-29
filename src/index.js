@@ -7,7 +7,7 @@ import {
   sendDiscordMessage,
 } from "./discord.js";
 import { extractHeartopiaResources } from "./extract.js";
-import { classifyInformation } from "./information.js";
+import { classifyInformation, selectInformationImageUrls } from "./information.js";
 import { downloadPostImages } from "./media.js";
 import {
   hasPublication,
@@ -134,13 +134,14 @@ function eventsForPost(post) {
   return informationEvents;
 }
 
-async function mediaFilesFor(settings, post) {
+async function mediaFilesFor(settings, post, information) {
   // Open the exact post to collect every image in a carousel. This extra page
   // load occurs only for high-confidence image categories, not every check.
   const detailedPost = post.hasExactMedia
     ? post
     : await fetchThreadsPost(settings.username, post.id);
-  return downloadPostImages(detailedPost.imageUrls || [], post.id);
+  const imageUrls = selectInformationImageUrls(detailedPost.imageUrls || [], information);
+  return downloadPostImages(imageUrls, post.id);
 }
 
 async function processPost(settings, post, state, options = {}) {
@@ -148,7 +149,7 @@ async function processPost(settings, post, state, options = {}) {
   const events = eventsForPost(post).filter(
     (event) => !onlyCategory || event.category === onlyCategory,
   );
-  let imageFilesPromise = null;
+  const imageFilesPromises = new Map();
 
   for (const event of events) {
     if (!options.force && hasPublication(state, post.id, event.category)) continue;
@@ -168,8 +169,13 @@ async function processPost(settings, post, state, options = {}) {
     } else {
       let files = [];
       if (event.information.attachImages) {
-        imageFilesPromise ||= mediaFilesFor(settings, post);
-        files = await imageFilesPromise;
+        if (!imageFilesPromises.has(event.category)) {
+          imageFilesPromises.set(
+            event.category,
+            mediaFilesFor(settings, post, event.information),
+          );
+        }
+        files = await imageFilesPromises.get(event.category);
       }
       if (event.information.requireImages && files.length === 0) {
         throw new Error(`${event.information.title}符合條件，但沒有取得任何貼文圖片。`);

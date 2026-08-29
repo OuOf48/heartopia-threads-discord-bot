@@ -43,7 +43,10 @@ jobs:
         shell: bash
         run: |
           node --input-type=module <<'NODE'
-          import { classifyInformation } from "./src/information.js";
+          import {
+            classifyInformation,
+            selectInformationImageUrls,
+          } from "./src/information.js";
           import { downloadPostImages } from "./src/media.js";
           import { fetchThreadsPost } from "./src/threads.js";
           import { mkdir, writeFile } from "node:fs/promises";
@@ -57,11 +60,15 @@ jobs:
           const failures = [];
           for (const probe of probes) {
             const post = await fetchThreadsPost("oorainielove520oo", probe.postId);
+            const information = classifyInformation(post.text).find(
+              (item) => item.category === probe.category,
+            );
             const categories = classifyInformation(post.text).map((item) => item.category);
             if (!categories.includes(probe.category)) {
               throw new Error(`${probe.postId} 未辨識為 ${probe.category}`);
             }
-            const files = await downloadPostImages(post.imageUrls, post.id);
+            const selectedUrls = selectInformationImageUrls(post.imageUrls, information);
+            const files = await downloadPostImages(selectedUrls, post.id);
             const directory = `probe-images/${post.id}`;
             await mkdir(directory, { recursive: true });
             await Promise.all(
