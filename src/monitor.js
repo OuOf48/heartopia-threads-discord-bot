@@ -1,4 +1,5 @@
 const DEFAULT_VISIBILITY_GRACE_MS = 10 * 60 * 1_000;
+const DEFAULT_STATE_HEARTBEAT_MS = 60 * 60 * 1_000;
 const MAX_FUTURE_SKEW_MS = 5 * 60 * 1_000;
 
 /**
@@ -33,4 +34,18 @@ export function selectFreshUnseenPosts(posts, state, options = {}) {
     .reverse();
 }
 
-export { DEFAULT_VISIBILITY_GRACE_MS };
+/**
+ * Avoid one state commit for every frequent poll while keeping a durable
+ * freshness watermark. New posts are persisted immediately by the caller.
+ */
+export function shouldAdvanceCheckWatermark(state, options = {}) {
+  const now = Number.isFinite(options.now) ? options.now : Date.now();
+  const heartbeatMs = Number.isFinite(options.heartbeatMs)
+    ? Math.max(0, options.heartbeatMs)
+    : DEFAULT_STATE_HEARTBEAT_MS;
+  const previous = Date.parse(state?.lastSuccessfulCheck || "");
+
+  return !Number.isFinite(previous) || previous > now || now - previous >= heartbeatMs;
+}
+
+export { DEFAULT_STATE_HEARTBEAT_MS, DEFAULT_VISIBILITY_GRACE_MS };
