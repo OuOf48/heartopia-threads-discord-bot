@@ -5,6 +5,7 @@ const METEOR_PATTERN = /流星雨/iu;
 const METEOR_LOCATION_PATTERN =
   /(?:流星雨[^\n]{0,20}(?:位置|地圖)|(?:位置|地圖)[^\n]{0,20}流星雨)/iu;
 const PINK_BUBBLE_PATTERN = /粉紅(?:色)?泡泡/iu;
+const REDEMPTION_CODE_PATTERN = /(?:兌換碼|兑换码|兌換序號|兑换序号|禮包碼|礼包码)/iu;
 
 function normalizedLines(rawText) {
   return String(rawText ?? "")
@@ -57,6 +58,23 @@ function pinkBubbleSummary(lines) {
   return clip(lines.slice(start, start + 2).join("\n"), 500);
 }
 
+function redemptionCodeSummary(lines) {
+  const start = lines.findIndex((line) => REDEMPTION_CODE_PATTERN.test(line));
+  if (start < 0) return null;
+
+  const selected = [];
+  for (const line of lines.slice(start, start + 6)) {
+    if (
+      selected.length > 0 &&
+      /^(?:今日溜溜橡木|螢石\s*[:：]|天氣預報\s*[:：]|慶典|粉紅(?:色)?泡泡)/iu.test(line)
+    ) {
+      break;
+    }
+    selected.push(line);
+  }
+  return clip(selected.join("\n"), 700);
+}
+
 /**
  * Classify only high-confidence, actionable information.
  *
@@ -99,6 +117,19 @@ export function classifyInformation(rawText) {
       requireImages: true,
       // The location maps are the final two slides in the daily-news carousel.
       imageSelection: { mode: "tail", count: 2 },
+    });
+  }
+
+  if (REDEMPTION_CODE_PATTERN.test(text)) {
+    results.push({
+      category: "redemption-code",
+      title: "🎁 心動小鎮兌換碼",
+      summary: redemptionCodeSummary(lines),
+      // Some authors put the actual code in an image. Keep this optional for
+      // text-only posts and limit carousels so unrelated slides do not flood Discord.
+      attachImages: true,
+      requireImages: false,
+      imageSelection: { mode: "head", count: 2 },
     });
   }
 

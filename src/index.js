@@ -24,6 +24,7 @@ const DEFAULT_RESOURCE_CHANNEL_ID = "1519592044283170897";
 const DEFAULT_UPDATE_CHANNEL_ID = "1519591991950839828";
 const DEFAULT_METEOR_CHANNEL_ID = "1519592074972893195";
 const DEFAULT_PINK_BUBBLE_CHANNEL_ID = "1525791309871317125";
+const DEFAULT_REDEMPTION_CODE_CHANNEL_ID = "1519592016005304430";
 
 function argumentValue(name) {
   const prefix = `--${name}=`;
@@ -56,6 +57,9 @@ function config() {
     pinkBubbleChannelId: String(
       process.env.DISCORD_PINK_BUBBLE_CHANNEL_ID || DEFAULT_PINK_BUBBLE_CHANNEL_ID,
     ).trim(),
+    redemptionCodeChannelId: String(
+      process.env.DISCORD_REDEMPTION_CODE_CHANNEL_ID || DEFAULT_REDEMPTION_CODE_CHANNEL_ID,
+    ).trim(),
     botToken: String(process.env.DISCORD_BOT_TOKEN || "").trim(),
     statePath: resolve(process.env.STATE_PATH || DEFAULT_STATE_PATH),
     backfillPostId: String(
@@ -75,6 +79,7 @@ function channelFor(settings, category) {
   if (category === "recipe") return settings.updateChannelId;
   if (category === "meteor") return settings.meteorChannelId;
   if (category === "pink-bubble") return settings.pinkBubbleChannelId;
+  if (category === "redemption-code") return settings.redemptionCodeChannelId;
   throw new Error(`沒有設定情報分類頻道：${category}`);
 }
 
@@ -204,8 +209,14 @@ async function processPost(settings, post, state, options = {}) {
 
 async function runBackfill(settings) {
   if (!settings.backfillPostId) throw new Error("backfill 模式需要 BACKFILL_POST_ID。");
-  if (!["resource", "recipe", "meteor", "pink-bubble"].includes(settings.backfillCategory)) {
-    throw new Error("backfill 模式需要 resource、recipe、meteor 或 pink-bubble 分類。");
+  if (
+    !["resource", "recipe", "meteor", "pink-bubble", "redemption-code"].includes(
+      settings.backfillCategory,
+    )
+  ) {
+    throw new Error(
+      "backfill 模式需要 resource、recipe、meteor、pink-bubble 或 redemption-code 分類。",
+    );
   }
 
   const post = await fetchThreadsPost(settings.username, settings.backfillPostId);

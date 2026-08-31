@@ -69,6 +69,31 @@ test("辨識粉紅泡泡位置並要求貼文圖片", () => {
   );
 });
 
+test("辨識兌換碼並保留序號與期限", () => {
+  const results = classifyInformation(`
+    小鎮號外～
+    新兌換碼來了～
+    HEARTOPIA2026
+    有效期限：9月5日
+  `);
+  const result = results.find((item) => item.category === "redemption-code");
+
+  assert.equal(result.title, "🎁 心動小鎮兌換碼");
+  assert.equal(result.requireImages, false);
+  assert.equal(result.attachImages, true);
+  assert.equal(result.summary, "新兌換碼來了~\nHEARTOPIA2026\n有效期限:9月5日");
+  assert.deepEqual(
+    selectInformationImageUrls(["code-image", "instructions", "unrelated-slide"], result),
+    ["code-image", "instructions"],
+  );
+});
+
+test("辨識簡體兌換碼關鍵字", () => {
+  const [result] = classifyInformation("最新兑换码：WELCOME2026");
+  assert.equal(result.category, "redemption-code");
+  assert.equal(result.summary, "最新兑换码:WELCOME2026");
+});
+
 test("忽略無關個人動態", () => {
   assert.deepEqual(classifyInformation("最麻煩的完成✅ 總算安心了，可以補眠了。"), []);
 });
