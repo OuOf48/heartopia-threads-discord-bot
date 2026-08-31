@@ -1,8 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  DEFAULT_STATE_HEARTBEAT_MS,
   DEFAULT_VISIBILITY_GRACE_MS,
   selectFreshUnseenPosts,
+  shouldAdvanceCheckWatermark,
 } from "../src/monitor.js";
 
 test("只處理時間分界後的新貼文，忽略之後才載入的歷史貼文", () => {
@@ -51,4 +53,30 @@ test("忽略沒有時間與異常未來時間的貼文", () => {
   };
 
   assert.deepEqual(selectFreshUnseenPosts(posts, state, { now }), []);
+});
+
+test("頻繁輪詢時每小時才推進一次檢查水位", () => {
+  const previous = "2026-08-31T20:00:00.000Z";
+  const state = { lastSuccessfulCheck: previous };
+  const previousMs = Date.parse(previous);
+
+  assert.equal(
+    shouldAdvanceCheckWatermark(state, {
+      now: previousMs + DEFAULT_STATE_HEARTBEAT_MS - 1,
+    }),
+    false,
+  );
+  assert.equal(
+    shouldAdvanceCheckWatermark(state, {
+      now: previousMs + DEFAULT_STATE_HEARTBEAT_MS,
+    }),
+    true,
+  );
+  assert.equal(
+    shouldAdvanceCheckWatermark(
+      { lastSuccessfulCheck: null },
+      { now: previousMs },
+    ),
+    true,
+  );
 });
