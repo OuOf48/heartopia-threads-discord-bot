@@ -1,9 +1,11 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  DEFAULT_CATEGORY_REPLAY_WINDOW_MS,
   DEFAULT_STATE_HEARTBEAT_MS,
   DEFAULT_VISIBILITY_GRACE_MS,
   selectFreshUnseenPosts,
+  selectRecentPostsWithMissingPublications,
   shouldAdvanceCheckWatermark,
 } from "../src/monitor.js";
 
@@ -78,5 +80,42 @@ test("頻繁輪詢時每小時才推進一次檢查水位", () => {
       { now: previousMs },
     ),
     true,
+  );
+});
+
+test("最近24小時貼文新增分類時只補送缺少的分類", () => {
+  const now = Date.parse("2026-09-01T00:00:00.000Z");
+  const posts = [
+    {
+      id: "recent-missing",
+      publishedAt: new Date(now - 2 * 60 * 60 * 1_000).toISOString(),
+      categories: ["resource", "lottery-pool"],
+    },
+    {
+      id: "recent-complete",
+      publishedAt: new Date(now - 3 * 60 * 60 * 1_000).toISOString(),
+      categories: ["resource"],
+    },
+    {
+      id: "too-old",
+      publishedAt: new Date(now - DEFAULT_CATEGORY_REPLAY_WINDOW_MS - 1).toISOString(),
+      categories: ["lottery-pool"],
+    },
+  ];
+  const state = {
+    publishedKeys: [
+      "recent-missing:resource",
+      "recent-complete:resource",
+    ],
+  };
+
+  assert.deepEqual(
+    selectRecentPostsWithMissingPublications(
+      posts,
+      state,
+      (post) => post.categories,
+      { now },
+    ).map((post) => post.id),
+    ["recent-missing"],
   );
 });

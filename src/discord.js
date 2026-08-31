@@ -53,6 +53,7 @@ export function buildInformationMessage({ username, post, information }) {
     meteor: 0x6f8cff,
     "pink-bubble": 0xff76b7,
     recipe: 0xf2ad5b,
+    "lottery-pool": 0x9b72e8,
     "redemption-code": 0x57c785,
   };
   return {

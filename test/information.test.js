@@ -88,6 +88,39 @@ test("辨識兌換碼並保留序號與期限", () => {
   );
 });
 
+test("辨識藍鑽與風物新獎池並擷取更新段落", () => {
+  const results = classifyInformation(`
+    9月1日 小鎮新聞～
+    今日溜溜橡木：家園01區
+    螢石：家園04區
+    另外是這次藍鑽跟風物爆料！！
+    好消息：今次藍鑽池超可愛😍
+    壞消息：保底2620藍鑽🤣
+    風物這個風格是展演平替嗎xD
+    PS. 慶典商店每星期有藍鑽買
+  `);
+  const result = results.find((item) => item.category === "lottery-pool");
+
+  assert.equal(result.title, "🎟️ 新抽獎獎池情報");
+  assert.equal(result.requireImages, false);
+  assert.equal(result.attachImages, true);
+  assert.match(result.summary, /^另外是這次藍鑽跟風物爆料!!/u);
+  assert.match(result.summary, /保底2620藍鑽/u);
+  assert.doesNotMatch(result.summary, /今日溜溜橡木|PS\./u);
+  assert.deepEqual(
+    selectInformationImageUrls(
+      ["pool-1", "pool-2", "pool-3", "pool-4", "unrelated"],
+      result,
+    ),
+    ["pool-1", "pool-2", "pool-3", "pool-4"],
+  );
+});
+
+test("辨識簡體抽獎獎池", () => {
+  const [result] = classifyInformation("最新抽奖奖池更新～");
+  assert.equal(result.category, "lottery-pool");
+});
+
 test("辨識簡體兌換碼關鍵字", () => {
   const [result] = classifyInformation("最新兑换码：WELCOME2026");
   assert.equal(result.category, "redemption-code");
