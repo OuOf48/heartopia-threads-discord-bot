@@ -11,6 +11,7 @@ import { classifyInformation, selectInformationImageUrls } from "./information.j
 import { downloadPostImages } from "./media.js";
 import {
   selectFreshUnseenPosts,
+  selectRecentPostsWithMissingPublications,
   shouldAdvanceCheckWatermark,
 } from "./monitor.js";
 import {
@@ -80,6 +81,7 @@ function config() {
 function channelFor(settings, category) {
   if (category === "resource") return settings.resourceChannelId;
   if (category === "recipe") return settings.updateChannelId;
+  if (category === "lottery-pool") return settings.updateChannelId;
   if (category === "meteor") return settings.meteorChannelId;
   if (category === "pink-bubble") return settings.pinkBubbleChannelId;
   if (category === "redemption-code") return settings.redemptionCodeChannelId;
@@ -213,12 +215,17 @@ async function processPost(settings, post, state, options = {}) {
 async function runBackfill(settings) {
   if (!settings.backfillPostId) throw new Error("backfill 模式需要 BACKFILL_POST_ID。");
   if (
-    !["resource", "recipe", "meteor", "pink-bubble", "redemption-code"].includes(
-      settings.backfillCategory,
-    )
+    ![
+      "resource",
+      "recipe",
+      "lottery-pool",
+      "meteor",
+      "pink-bubble",
+      "redemption-code",
+    ].includes(settings.backfillCategory)
   ) {
     throw new Error(
-      "backfill 模式需要 resource、recipe、meteor、pink-bubble 或 redemption-code 分類。",
+      "backfill 模式需要 resource、recipe、lottery-pool、meteor、pink-bubble 或 redemption-code 分類。",
     );
   }
 
@@ -262,15 +269,26 @@ async function runMonitor(settings) {
     state = rememberPost(state, post.id);
   }
 
+  const replayPosts = selectRecentPostsWithMissingPublications(
+    posts,
+    state,
+    (post) => eventsForPost(post).map((event) => event.category),
+  );
+  for (const post of replayPosts) {
+    state = await processPost(settings, post, state);
+    state = rememberPost(state, post.id);
+  }
+
   // Every card visible in this successful scan becomes part of the baseline,
   // including stale cards that were intentionally not published.
   for (const post of [...posts].reverse()) state = rememberPost(state, post.id);
 
-  // Poll frequently, but avoid filling the repository with one state commit
-  // every ten minutes when nothing changed. New posts always persist at once.
+  // Avoid filling the repository with an unchanged state commit on every
+  // hourly scan. New posts and newly backfilled categories persist at once.
   const checkCompletedAt = Date.now();
   if (
     unseenPosts.length > 0 ||
+    replayPosts.length > 0 ||
     shouldAdvanceCheckWatermark(state, { now: checkCompletedAt })
   ) {
     state.lastSuccessfulCheck = new Date(checkCompletedAt).toISOString();
@@ -280,10 +298,13 @@ async function runMonitor(settings) {
   if (ignoredStaleCount > 0) {
     console.log(`已忽略 ${ignoredStaleCount} 篇較早才載入的歷史貼文。`);
   }
+  if (replayPosts.length > 0) {
+    console.log(`已補送 ${replayPosts.length} 篇最近貼文中缺少的情報分類。`);
+  }
   console.log(
-    unseenPosts.length === 0
+    unseenPosts.length === 0 && replayPosts.length === 0
       ? `檢查完成：沒有新貼文（共讀取 ${posts.length} 篇）。`
-      : `檢查完成：處理 ${unseenPosts.length} 篇新貼文。`,
+      : `檢查完成：處理 ${unseenPosts.length} 篇新貼文、補送 ${replayPosts.length} 篇分類。`,
   );
 }
 
