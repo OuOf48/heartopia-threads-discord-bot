@@ -9,7 +9,10 @@ import {
 import { extractHeartopiaResources } from "./extract.js";
 import { classifyInformation, selectInformationImageUrls } from "./information.js";
 import { downloadPostImages } from "./media.js";
-import { selectFreshUnseenPosts } from "./monitor.js";
+import {
+  selectFreshUnseenPosts,
+  shouldAdvanceCheckWatermark,
+} from "./monitor.js";
 import {
   hasPublication,
   loadState,
@@ -262,7 +265,16 @@ async function runMonitor(settings) {
   // Every card visible in this successful scan becomes part of the baseline,
   // including stale cards that were intentionally not published.
   for (const post of [...posts].reverse()) state = rememberPost(state, post.id);
-  state.lastSuccessfulCheck = new Date().toISOString();
+
+  // Poll frequently, but avoid filling the repository with one state commit
+  // every ten minutes when nothing changed. New posts always persist at once.
+  const checkCompletedAt = Date.now();
+  if (
+    unseenPosts.length > 0 ||
+    shouldAdvanceCheckWatermark(state, { now: checkCompletedAt })
+  ) {
+    state.lastSuccessfulCheck = new Date(checkCompletedAt).toISOString();
+  }
   await saveState(settings.statePath, state);
   const ignoredStaleCount = unseenCount - unseenPosts.length;
   if (ignoredStaleCount > 0) {
