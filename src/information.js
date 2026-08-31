@@ -6,6 +6,8 @@ const METEOR_LOCATION_PATTERN =
   /(?:流星雨[^\n]{0,20}(?:位置|地圖)|(?:位置|地圖)[^\n]{0,20}流星雨)/iu;
 const PINK_BUBBLE_PATTERN = /粉紅(?:色)?泡泡/iu;
 const REDEMPTION_CODE_PATTERN = /(?:兌換碼|兑换码|兌換序號|兑换序号|禮包碼|礼包码)/iu;
+const LOTTERY_POOL_PATTERN =
+  /(?:抽獎(?:獎池|池)|抽奖(?:奖池|池)|藍鑽池|蓝钻池|風物(?:獎池|奖池)|风物(?:奖池|奖池)|(?:新|最新|這次|今次).{0,10}(?:獎池|奖池)|(?:獎池|奖池).{0,10}(?:更新|上新|爆料)|(?:藍鑽|蓝钻).{0,8}(?:風物|风物).{0,4}爆料)/iu;
 
 function normalizedLines(rawText) {
   return String(rawText ?? "")
@@ -75,6 +77,25 @@ function redemptionCodeSummary(lines) {
   return clip(selected.join("\n"), 700);
 }
 
+function lotteryPoolSummary(lines) {
+  const start = lines.findIndex((line) => LOTTERY_POOL_PATTERN.test(line));
+  if (start < 0) return null;
+
+  const selected = [];
+  for (const line of lines.slice(start, start + 6)) {
+    if (
+      selected.length > 0 &&
+      /^(?:今日溜溜橡木|螢石\s*[:：]|天氣預報\s*[:：]|PS\s*[.。:：]|兌換碼|兑换码|粉紅(?:色)?泡泡)/iu.test(
+        line,
+      )
+    ) {
+      break;
+    }
+    selected.push(line);
+  }
+  return clip(selected.join("\n"), 700);
+}
+
 /**
  * Classify only high-confidence, actionable information.
  *
@@ -94,6 +115,18 @@ export function classifyInformation(rawText) {
       summary: recipeSummary(lines),
       attachImages: true,
       requireImages: true,
+    });
+  }
+
+  if (LOTTERY_POOL_PATTERN.test(text)) {
+    results.push({
+      category: "lottery-pool",
+      title: "🎟️ 新抽獎獎池情報",
+      summary: lotteryPoolSummary(lines),
+      attachImages: true,
+      requireImages: false,
+      // Pool announcements normally put the relevant preview slides first.
+      imageSelection: { mode: "head", count: 4 },
     });
   }
 
