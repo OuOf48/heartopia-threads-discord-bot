@@ -1,5 +1,6 @@
 const DEFAULT_VISIBILITY_GRACE_MS = 10 * 60 * 1_000;
 const DEFAULT_STATE_HEARTBEAT_MS = 60 * 60 * 1_000;
+const DEFAULT_CATEGORY_REPLAY_WINDOW_MS = 24 * 60 * 60 * 1_000;
 const MAX_FUTURE_SKEW_MS = 5 * 60 * 1_000;
 
 /**
@@ -35,6 +36,44 @@ export function selectFreshUnseenPosts(posts, state, options = {}) {
 }
 
 /**
+ * Select recent visible posts that are already known but are missing one or
+ * more category publication keys. This lets a newly added classifier backfill
+ * its category without replaying categories that were sent before.
+ */
+export function selectRecentPostsWithMissingPublications(
+  posts,
+  state,
+  categoriesForPost,
+  options = {},
+) {
+  if (typeof categoriesForPost !== "function") return [];
+
+  const now = Number.isFinite(options.now) ? options.now : Date.now();
+  const windowMs = Number.isFinite(options.windowMs)
+    ? Math.max(0, options.windowMs)
+    : DEFAULT_CATEGORY_REPLAY_WINDOW_MS;
+  const publishedKeys = new Set(state?.publishedKeys || []);
+
+  return posts
+    .filter((post) => {
+      const publishedAt = Date.parse(post.publishedAt || "");
+      if (
+        !Number.isFinite(publishedAt) ||
+        publishedAt < now - windowMs ||
+        publishedAt > now + MAX_FUTURE_SKEW_MS
+      ) {
+        return false;
+      }
+
+      const categories = categoriesForPost(post);
+      return categories.some(
+        (category) => !publishedKeys.has(`${post.id}:${category}`),
+      );
+    })
+    .reverse();
+}
+
+/**
  * Avoid one state commit for every frequent poll while keeping a durable
  * freshness watermark. New posts are persisted immediately by the caller.
  */
@@ -48,4 +87,8 @@ export function shouldAdvanceCheckWatermark(state, options = {}) {
   return !Number.isFinite(previous) || previous > now || now - previous >= heartbeatMs;
 }
 
-export { DEFAULT_STATE_HEARTBEAT_MS, DEFAULT_VISIBILITY_GRACE_MS };
+export {
+  DEFAULT_CATEGORY_REPLAY_WINDOW_MS,
+  DEFAULT_STATE_HEARTBEAT_MS,
+  DEFAULT_VISIBILITY_GRACE_MS,
+};
