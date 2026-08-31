@@ -2,6 +2,7 @@
   "version": 2,
   "initialized": true,
   "seenPostIds": [
+    "DcuH6o6EzMP",
     "DcsqIT9EULx",
     "DcrjG9Zk8dq",
     "DcqC77BEdfr",
@@ -24,6 +25,7 @@
     "DcV8fsQEaol"
   ],
   "publishedKeys": [
+    "DcuH6o6EzMP:resource",
     "DcsqIT9EULx:redemption-code",
     "DcrjG9Zk8dq:resource",
     "Dco90yWE8vO:resource",
@@ -39,5 +41,5 @@
     "DcmaVC4k1YM:resource",
     "DcmyAI2GKma:resource"
   ],
-  "lastSuccessfulCheck": "2026-08-31T20:09:00.395Z"
+  "lastSuccessfulCheck": "2026-08-31T23:37:30.474Z"
 }
