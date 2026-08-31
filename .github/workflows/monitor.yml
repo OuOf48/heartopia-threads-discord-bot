@@ -2,8 +2,14 @@ name: Threads 心動小鎮監測
 
 on:
   schedule:
-    # 避開整點的 GitHub Actions 高峰；UTC 17/47 分即每 30 分鐘一次。
-    - cron: "17,47 * * * *"
+    # 增加觸發密度以降低 GitHub 延遲或漏掉排程造成的空窗。
+    # 分鐘刻意避開整點；GitHub 仍可能因平台壅塞而延後執行。
+    - cron: "7,17,27,37,47,57 * * * *"
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - "data/state.json"
   workflow_dispatch:
     inputs:
       mode:
