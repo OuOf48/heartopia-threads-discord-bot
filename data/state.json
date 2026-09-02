@@ -2,6 +2,7 @@
   "version": 2,
   "initialized": true,
   "seenPostIds": [
+    "Dcwso5LEx8m",
     "Dcu_AwbES8T",
     "DcutIqpEbzh",
     "DcuH6o6EzMP",
@@ -27,6 +28,7 @@
     "DcV8fsQEaol"
   ],
   "publishedKeys": [
+    "Dcwso5LEx8m:resource",
     "DcuH6o6EzMP:lottery-pool",
     "DcuH6o6EzMP:resource",
     "DcsqIT9EULx:redemption-code",
@@ -44,5 +46,5 @@
     "DcmaVC4k1YM:resource",
     "DcmyAI2GKma:resource"
   ],
-  "lastSuccessfulCheck": "2026-09-01T21:46:04.921Z"
+  "lastSuccessfulCheck": "2026-09-02T00:12:06.575Z"
 }
