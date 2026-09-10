@@ -2,6 +2,8 @@
   "version": 2,
   "initialized": true,
   "seenPostIds": [
+    "DdFcC2_n6Fv",
+    "DdFS81DEwOa",
     "DdCuIdAk8Z3",
     "DdAyF2JEab9",
     "DdAYEd2HyUD",
@@ -47,6 +49,7 @@
     "DcV8fsQEaol"
   ],
   "publishedKeys": [
+    "DdFS81DEwOa:resource",
     "DdCuIdAk8Z3:resource",
     "DdCuIdAk8Z3:lottery-pool",
     "DdAJLaVk3eH:resource",
@@ -75,5 +78,5 @@
     "DcmaVC4k1YM:resource",
     "DcmyAI2GKma:resource"
   ],
-  "lastSuccessfulCheck": "2026-09-09T21:41:26.697Z"
+  "lastSuccessfulCheck": "2026-09-10T00:13:46.830Z"
 }
