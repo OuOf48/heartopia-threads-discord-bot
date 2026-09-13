@@ -2,6 +2,7 @@
   "version": 2,
   "initialized": true,
   "seenPostIds": [
+    "DdPlszNk9gg",
     "DdNAyXdE5F4",
     "DdLu2uZEXIp",
     "DdLsS1ZEfvj",
@@ -55,6 +56,7 @@
     "DcV8fsQEaol"
   ],
   "publishedKeys": [
+    "DdPlszNk9gg:resource",
     "DdNAyXdE5F4:resource",
     "DdLu2uZEXIp:meteor",
     "DdKcgwsn8WU:pink-bubble",
@@ -89,5 +91,5 @@
     "DcmaVC4k1YM:resource",
     "DcmyAI2GKma:resource"
   ],
-  "lastSuccessfulCheck": "2026-09-13T20:47:52.689Z"
+  "lastSuccessfulCheck": "2026-09-13T23:08:24.866Z"
 }
