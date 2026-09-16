@@ -2,6 +2,7 @@
   "version": 2,
   "initialized": true,
   "seenPostIds": [
+    "DdUwE8pk2-P",
     "DdT3bNznztg",
     "DdSK59iE91Q",
     "DdQooV1EVpd",
@@ -61,6 +62,8 @@
     "DcV8fsQEaol"
   ],
   "publishedKeys": [
+    "DdUwE8pk2-P:resource",
+    "DdUwE8pk2-P:meteor",
     "DdSK59iE91Q:resource",
     "DdSK59iE91Q:meteor",
     "DdQd6xrkRv2:redemption-code",
@@ -100,5 +103,5 @@
     "DcmaVC4k1YM:resource",
     "DcmyAI2GKma:resource"
   ],
-  "lastSuccessfulCheck": "2026-09-15T21:18:44.407Z"
+  "lastSuccessfulCheck": "2026-09-16T00:17:36.025Z"
 }
