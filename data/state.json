@@ -2,6 +2,7 @@
   "version": 2,
   "initialized": true,
   "seenPostIds": [
+    "Ddr7HtIE0we",
     "DdqkHPJkXGy",
     "DdqRRvkkQOi",
     "Ddpf7p_n-zd",
@@ -90,6 +91,9 @@
     "DcV8fsQEaol"
   ],
   "publishedKeys": [
+    "Ddr7HtIE0we:resource",
+    "Ddr7HtIE0we:meteor",
+    "Ddr7HtIE0we:recipe",
     "Ddpf7p_n-zd:resource",
     "DdmxATWE83-:resource",
     "DdkMSxuk8gS:resource",
@@ -145,5 +149,5 @@
     "DcmaVC4k1YM:resource",
     "DcmyAI2GKma:resource"
   ],
-  "lastSuccessfulCheck": "2026-09-24T19:07:59.837Z"
+  "lastSuccessfulCheck": "2026-09-24T22:22:34.032Z"
 }
