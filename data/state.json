@@ -2,6 +2,8 @@
   "version": 2,
   "initialized": true,
   "seenPostIds": [
+    "DeENMr3kbsC",
+    "DeD4PUsERLW",
     "DeC_iLSE_wT",
     "DeAhKq1E-0O",
     "Dd98ezlkw84",
@@ -117,6 +119,7 @@
     "DcV8fsQEaol"
   ],
   "publishedKeys": [
+    "DeD4PUsERLW:lottery-pool",
     "DeC_iLSE_wT:resource",
     "DeAhKq1E-0O:resource",
     "Dd8qW0oH3Oy:meteor",
@@ -190,5 +193,5 @@
     "DcmaVC4k1YM:resource",
     "DcmyAI2GKma:resource"
   ],
-  "lastSuccessfulCheck": "2026-10-04T02:37:24.954Z"
+  "lastSuccessfulCheck": "2026-10-04T09:44:37.648Z"
 }
