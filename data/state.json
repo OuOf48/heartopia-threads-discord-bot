@@ -2,6 +2,7 @@
   "version": 2,
   "initialized": true,
   "seenPostIds": [
+    "DeP9lg_k74z",
     "DeOrZB1H2UK",
     "DeOpr-UkSUu",
     "DeNZCl1kxuV",
@@ -129,6 +130,8 @@
     "DcV8fsQEaol"
   ],
   "publishedKeys": [
+    "DeP9lg_k74z:resource",
+    "DeP9lg_k74z:meteor",
     "DeOrZB1H2UK:meteor",
     "DeNZCl1kxuV:resource",
     "DeNZCl1kxuV:meteor",
@@ -211,5 +214,5 @@
     "DcmaVC4k1YM:resource",
     "DcmyAI2GKma:resource"
   ],
-  "lastSuccessfulCheck": "2026-10-08T21:18:07.564Z"
+  "lastSuccessfulCheck": "2026-10-09T02:07:41.353Z"
 }
