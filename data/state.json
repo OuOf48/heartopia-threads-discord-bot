@@ -2,6 +2,7 @@
   "version": 2,
   "initialized": true,
   "seenPostIds": [
+    "Deh_JrPk9Ci",
     "DefbYN3EzZO",
     "Dec2AQik3rb",
     "DebcvTpEclz",
@@ -146,6 +147,8 @@
     "DcV8fsQEaol"
   ],
   "publishedKeys": [
+    "Deh_JrPk9Ci:resource",
+    "Deh_JrPk9Ci:lottery-pool",
     "DefbYN3EzZO:resource",
     "DefbYN3EzZO:recipe",
     "Dec2AQik3rb:resource",
@@ -240,5 +243,5 @@
     "DcmaVC4k1YM:resource",
     "DcmyAI2GKma:resource"
   ],
-  "lastSuccessfulCheck": "2026-10-15T21:25:41.296Z"
+  "lastSuccessfulCheck": "2026-10-16T00:23:15.779Z"
 }
