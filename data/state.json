@@ -2,6 +2,7 @@
   "version": 2,
   "initialized": true,
   "seenPostIds": [
+    "Dekk3PZE8Gp",
     "DejhPWbH_2b",
     "Dejca3PH9ga",
     "Deh_JrPk9Ci",
@@ -149,6 +150,7 @@
     "DcV8fsQEaol"
   ],
   "publishedKeys": [
+    "Dekk3PZE8Gp:resource",
     "Deh_JrPk9Ci:resource",
     "Deh_JrPk9Ci:lottery-pool",
     "DefbYN3EzZO:resource",
@@ -245,5 +247,5 @@
     "DcmaVC4k1YM:resource",
     "DcmyAI2GKma:resource"
   ],
-  "lastSuccessfulCheck": "2026-10-16T19:56:48.796Z"
+  "lastSuccessfulCheck": "2026-10-16T22:49:44.414Z"
 }
