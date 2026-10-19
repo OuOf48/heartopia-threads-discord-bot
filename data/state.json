@@ -2,6 +2,7 @@
   "version": 2,
   "initialized": true,
   "seenPostIds": [
+    "DesSvI9E5ZZ",
     "Deq48o9kRYG",
     "Deq493GES2w",
     "DeptzfAk8ac",
@@ -157,6 +158,8 @@
     "DcV8fsQEaol"
   ],
   "publishedKeys": [
+    "DesSvI9E5ZZ:resource",
+    "DesSvI9E5ZZ:meteor",
     "Deq48o9kRYG:redemption-code",
     "Deq493GES2w:redemption-code",
     "DeptzfAk8ac:resource",
@@ -258,5 +261,5 @@
     "DcmaVC4k1YM:resource",
     "DcmyAI2GKma:resource"
   ],
-  "lastSuccessfulCheck": "2026-10-19T19:19:36.687Z"
+  "lastSuccessfulCheck": "2026-10-19T23:38:07.942Z"
 }
