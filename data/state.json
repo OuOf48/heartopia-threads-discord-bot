@@ -2,6 +2,8 @@
   "version": 2,
   "initialized": true,
   "seenPostIds": [
+    "DfYDxKDE2YX",
+    "DfXvqYHgXSY",
     "DfVe9p8E1bM",
     "DfUqG00E1E7",
     "DfT7j-QE6Pr",
@@ -202,6 +204,7 @@
     "DcV8fsQEaol"
   ],
   "publishedKeys": [
+    "DfYDxKDE2YX:resource",
     "DfVe9p8E1bM:resource",
     "DfS6zkck9oA:resource",
     "DfQVg3ak338:resource",
@@ -330,5 +333,5 @@
     "DcmaVC4k1YM:resource",
     "DcmyAI2GKma:resource"
   ],
-  "lastSuccessfulCheck": "2026-11-05T18:43:10.492Z"
+  "lastSuccessfulCheck": "2026-11-06T00:13:34.031Z"
 }
