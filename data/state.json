@@ -2,6 +2,7 @@
   "version": 2,
   "initialized": true,
   "seenPostIds": [
+    "DffyMNbkkrm",
     "DfefGDdEXkK",
     "DfdNiYCkp5b",
     "Dfb9wXrH8n1",
@@ -200,10 +201,10 @@
     "DchPcEsk0fe",
     "Dcetn87kz3R",
     "DcdsRVvEVk4",
-    "DccOnXuH_L6",
-    "DcaUaE1EZWb"
+    "DccOnXuH_L6"
   ],
   "publishedKeys": [
+    "DffyMNbkkrm:resource",
     "DfdNiYCkp5b:resource",
     "Dfbhgn-kUW-:recipe",
     "Dfaonnen_rN:resource",
@@ -336,5 +337,5 @@
     "DcmaVC4k1YM:resource",
     "DcmyAI2GKma:resource"
   ],
-  "lastSuccessfulCheck": "2026-11-08T21:08:10.281Z"
+  "lastSuccessfulCheck": "2026-11-09T00:51:37.575Z"
 }
