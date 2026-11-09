@@ -2,6 +2,9 @@
   "version": 2,
   "initialized": true,
   "seenPostIds": [
+    "DfhHF_THxF2",
+    "DfhHH6CH6nY",
+    "Dfg94QhEViK",
     "DffyMNbkkrm",
     "DfefGDdEXkK",
     "DfdNiYCkp5b",
@@ -198,12 +201,11 @@
     "DcmaVC4k1YM",
     "Dcj51Z2kxRd",
     "Dcj0m55E0LF",
-    "DchPcEsk0fe",
-    "Dcetn87kz3R",
-    "DcdsRVvEVk4",
-    "DccOnXuH_L6"
+    "DchPcEsk0fe"
   ],
   "publishedKeys": [
+    "DfhHF_THxF2:redemption-code",
+    "DfhHH6CH6nY:redemption-code",
     "DffyMNbkkrm:resource",
     "DfdNiYCkp5b:resource",
     "Dfbhgn-kUW-:recipe",
@@ -337,5 +339,5 @@
     "DcmaVC4k1YM:resource",
     "DcmyAI2GKma:resource"
   ],
-  "lastSuccessfulCheck": "2026-11-09T07:55:58.348Z"
+  "lastSuccessfulCheck": "2026-11-09T18:45:09.436Z"
 }
