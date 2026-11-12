@@ -2,6 +2,7 @@
   "version": 2,
   "initialized": true,
   "seenPostIds": [
+    "DfnrY8kHyf1",
     "Dfk-TEhn8nf",
     "DfjgbiyEehq",
     "DfiXK95H4gd",
@@ -200,10 +201,10 @@
     "DcqC77BEdfr",
     "Dco90yWE8vO",
     "DcnrXvekRQM",
-    "DcmyAI2GKma",
-    "DcmaVC4k1YM"
+    "DcmyAI2GKma"
   ],
   "publishedKeys": [
+    "DfnrY8kHyf1:resource",
     "Dfk-TEhn8nf:resource",
     "DfiXK95H4gd:resource",
     "DfhHF_THxF2:redemption-code",
@@ -341,5 +342,5 @@
     "DcmaVC4k1YM:resource",
     "DcmyAI2GKma:resource"
   ],
-  "lastSuccessfulCheck": "2026-11-11T18:40:52.835Z"
+  "lastSuccessfulCheck": "2026-11-12T01:31:23.347Z"
 }
