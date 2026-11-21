@@ -2,6 +2,7 @@
   "version": 2,
   "initialized": true,
   "seenPostIds": [
+    "Df-tKb9kxJ6",
     "Df8HFN1El5U",
     "Df5iJuzEfLp",
     "Df4RGh4kaJN",
@@ -200,10 +201,11 @@
     "Dc-gXiiEU1Q",
     "Dc-gYzhkUeM",
     "Dc9km4EkwKm",
-    "Dc714f4kzs_",
-    "Dc6_yB5E9la"
+    "Dc714f4kzs_"
   ],
   "publishedKeys": [
+    "Df-tKb9kxJ6:resource",
+    "Df-tKb9kxJ6:lottery-pool",
     "Df8HFN1El5U:resource",
     "Df5iJuzEfLp:resource",
     "Df5iJuzEfLp:meteor",
@@ -355,5 +357,5 @@
     "DcmaVC4k1YM:resource",
     "DcmyAI2GKma:resource"
   ],
-  "lastSuccessfulCheck": "2026-11-20T20:11:36.559Z"
+  "lastSuccessfulCheck": "2026-11-21T01:30:05.548Z"
 }
