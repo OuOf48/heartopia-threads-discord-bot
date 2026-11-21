@@ -2,6 +2,7 @@
   "version": 2,
   "initialized": true,
   "seenPostIds": [
+    "DgBRBu1k6QL",
     "Df_3slqEaaw",
     "Df_1XyCkW-w",
     "Df_VHNdkVHm",
@@ -200,10 +201,10 @@
     "DdAyF2JEab9",
     "DdAYEd2HyUD",
     "DdAJLaVk3eH",
-    "Dc_PSSXH14Q",
-    "Dc-gXiiEU1Q"
+    "Dc_PSSXH14Q"
   ],
   "publishedKeys": [
+    "DgBRBu1k6QL:resource",
     "Df-tKb9kxJ6:resource",
     "Df-tKb9kxJ6:lottery-pool",
     "Df8HFN1El5U:resource",
@@ -357,5 +358,5 @@
     "DcmaVC4k1YM:resource",
     "DcmyAI2GKma:resource"
   ],
-  "lastSuccessfulCheck": "2026-11-21T17:28:37.623Z"
+  "lastSuccessfulCheck": "2026-11-21T23:11:36.798Z"
 }
