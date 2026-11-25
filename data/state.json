@@ -2,6 +2,8 @@
   "version": 2,
   "initialized": true,
   "seenPostIds": [
+    "DgKZ4c4kSkL",
+    "DgKGVL1ESMJ",
     "DgJAKbSkQsb",
     "DgH1RQBEeV4",
     "DgGaU8lEb6x",
@@ -199,9 +201,7 @@
     "DdKep8KE3y-",
     "DdKcgwsn8WU",
     "DdH3k-kHwCb",
-    "DdFcC2_n6Fv",
-    "DdFS81DEwOa",
-    "DdCuIdAk8Z3"
+    "DdFcC2_n6Fv"
   ],
   "publishedKeys": [
     "DgJAKbSkQsb:resource",
@@ -361,5 +361,5 @@
     "DcmaVC4k1YM:resource",
     "DcmyAI2GKma:resource"
   ],
-  "lastSuccessfulCheck": "2026-11-25T02:22:54.551Z"
+  "lastSuccessfulCheck": "2026-11-25T12:48:29.382Z"
 }
