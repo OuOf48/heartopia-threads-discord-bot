@@ -2,6 +2,7 @@
   "version": 2,
   "initialized": true,
   "seenPostIds": [
+    "DgQv8ZQk31E",
     "DgOI9MzkVRI",
     "DgM6amfEb-X",
     "DgM0L7XEYVN",
@@ -200,10 +201,10 @@
     "DdQooV1EVpd",
     "DdQd6xrkRv2",
     "DdQd8UhEUd6",
-    "DdPlszNk9gg",
-    "DdNAyXdE5F4"
+    "DdPlszNk9gg"
   ],
   "publishedKeys": [
+    "DgQv8ZQk31E:resource",
     "DgOI9MzkVRI:resource",
     "DgOI9MzkVRI:lottery-pool",
     "DgM6amfEb-X:meteor",
@@ -369,5 +370,5 @@
     "DcmaVC4k1YM:resource",
     "DcmyAI2GKma:resource"
   ],
-  "lastSuccessfulCheck": "2026-11-27T18:55:46.572Z"
+  "lastSuccessfulCheck": "2026-11-28T01:56:51.176Z"
 }
